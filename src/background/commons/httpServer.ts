@@ -1,65 +1,42 @@
-import * as http from "http";
-import {IDisposable} from "./idisposable";
-import formidable, {Fields, Files} from 'formidable';
+import { HttpServer as NodeChannelHttpServer } from "@sevenqi/nodechannel";
+import { IDisposable } from "./idisposable";
 
-export default abstract class HttpServer implements IDisposable{
-    private httpServer: http.Server;
-    private readonly port:number;
-    protected constructor(port:number) {
+/**
+ * HTTP server backed by @sevenqi/nodechannel's HttpServer. Behaviour matches
+ * the previous local implementation: each inbound request body is surfaced via
+ * onData (multipart/form-data parsed to `{ fields, files }` JSON, other bodies
+ * as raw text) and every request is answered with 200 OK.
+ */
+export default abstract class HttpServer implements IDisposable {
+    private server?: NodeChannelHttpServer;
+    private readonly port: number;
+
+    protected constructor(port: number) {
         this.port = port;
     }
 
-    protected onError(has_error:any){
+    protected onError(has_error: any) {
 
     }
 
-    abstract onConnect(data:any):void;
+    abstract onConnect(data: any): void;
 
-    abstract onData(data:any):void;
+    abstract onData(data: any): void;
 
-    onFormData(err: any, fields: Fields, files: Files){
-        if (!err){
-            this.onData(JSON.stringify({fields:fields,files:files}))
-        }
-    }
+    protected onTimeout() {
 
-    protected onTimeout(){
-
-    }
-
-    private requestHandler(req: http.IncomingMessage, res: http.ServerResponse) {
-        const form = formidable({});
-        if (req.headers["content-type"]?.startsWith("multipart/form-data"))
-            form.parse(req,(err: any, fields: Fields, files: Files)=>{
-                if (!err){
-                    this.onData(JSON.stringify({fields:fields,files:files}))
-                }
-            });
-        else
-            req.on("data",(data:any)=>{
-                this.onData(data.toString())
-            })
-        res.writeHead(200,{'Content-type':'text/plain'});
-        res.end("<strong>OK!</strong>");
-    }
-
-    private init(){
-        this.httpServer = http.createServer(this.requestHandler.bind(this));
-        this.httpServer.on("error", this.onError.bind(this))
-        this.httpServer.on("listening", this.onConnect.bind(this))
-        this.httpServer.on("timeout", this.onTimeout.bind(this))
     }
 
     connect() {
-        this.init();
-        this.httpServer.listen(this.port);
+        this.server = new NodeChannelHttpServer({ port: this.port });
+        this.server.onServerData((data: any) => this.onData(data));
+        this.server.onError = (err: any) => this.onError(err);
+        this.server.onListening = () => this.onConnect(undefined);
+        this.server.listen();
     }
-
 
     dispose(): void {
-        this.httpServer.removeAllListeners();
-        this.httpServer.close();
-        delete this.httpServer;
+        this.server?.disListen();
+        this.server = undefined;
     }
-
 }

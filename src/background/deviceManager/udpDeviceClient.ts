@@ -48,7 +48,9 @@ export default class UdpDeviceClient extends UdpClient implements IDevice {
     state: boolean;
 
     onOpen(): void {
-        this.udpClient.setBroadcast(true)
+        // Broadcast is enabled by the underlying nodechannel UdpChannel
+        // (configured via the UdpClient base class), so no manual
+        // setBroadcast call is needed here anymore.
         this.state = true;
         this.pushAction({type:"RECIVE_MESSAGE",data:{messageType:MessageType.ChangeState,message:{success:true,address:this.address,info:"udp连接成功"}}})
     }
