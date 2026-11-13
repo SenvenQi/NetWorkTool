@@ -163,6 +163,7 @@ const { once } = require('node:events');
         await page.screenshot({path: path.join(output, 'http-800x600.png')});
         await page.getByRole('button', {name: '展开导航', exact: true}).click();
         await page.getByRole('button', {name: '收起导航', exact: true}).waitFor();
+        await page.waitForFunction(() => document.querySelector('.MuiDrawer-paper').getBoundingClientRect().width >= 239);
         await noOverflow();
         await viewport(1280, 800);
         await noOverflow();

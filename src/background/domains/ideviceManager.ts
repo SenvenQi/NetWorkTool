@@ -5,7 +5,7 @@ import IDeviceOption from "./deviceOption";
 export const IDeviceManager = createDecorator<IDeviceManager>('deviceManagerService');
 export interface IDeviceManager {
     deviceClients: import("./device").default[];
-    addDeviceClient: (deviceOptions: IDeviceOption) => void;
+    addDeviceClient: (deviceOptions: IDeviceOption) => void | Promise<void>;
     removeDeviceClient: (address: string) => void;
     sendMessageByAddress: (address:string,command:Buffer) => void;
 }

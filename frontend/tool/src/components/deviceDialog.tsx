@@ -16,6 +16,9 @@ export default function FormDialog(props:any) {
   const [deviceType] = React.useState(DeviceType.base);
   const [deviceChannelType, setDeviceChannelType] = React.useState(DeviceChannelType.Socket);
   const renderOption = () => {
+     if (deviceChannelType === DeviceChannelType.Ssh || deviceChannelType === DeviceChannelType.Sftp) {
+         return <TextField fullWidth sx={{p: 1}} label="默认用户名（可选）" value={options.username || ""} onChange={event => setOptions({username: event.target.value})} helperText="认证信息在连接时填写，不保存密码或私钥"/>;
+     }
      if (deviceChannelType === DeviceChannelType.Serialport){
              return <TextField fullWidth sx={{p:1}}
                                select
@@ -105,7 +108,7 @@ export default function FormDialog(props:any) {
 				value={address}
                     label="地址"
 				onChange={(event) => setAddress(event.target.value)}
-				placeholder={deviceChannelType === DeviceChannelType.Socket ? "host:port 或 [IPv6]:port" : "本地监听端口"}
+				placeholder={deviceChannelType === DeviceChannelType.Socket ? "host:port 或 [IPv6]:port" : deviceChannelType >= DeviceChannelType.Ssh ? "服务器地址，默认端口 22" : "本地监听端口"}
 				variant="standard" />
 		}
 	}
@@ -129,7 +132,7 @@ export default function FormDialog(props:any) {
 				SelectProps={{
 					native:true
 				}}>
-				 {[{name:"Tcp客户端",value:DeviceChannelType.Socket},{name:"串口客户端",value:DeviceChannelType.Serialport},{name:"http监听",value:DeviceChannelType.HttpServer},{name:"hid设备",value:DeviceChannelType.HidDevice},{name:"udp设备",value:DeviceChannelType.UdpDevice}].map((option) => (
+				 {[{name:"Tcp客户端",value:DeviceChannelType.Socket},{name:"串口客户端",value:DeviceChannelType.Serialport},{name:"http监听",value:DeviceChannelType.HttpServer},{name:"hid设备",value:DeviceChannelType.HidDevice},{name:"udp设备",value:DeviceChannelType.UdpDevice},{name:"SSH 终端",value:DeviceChannelType.Ssh},{name:"SFTP 文件传输",value:DeviceChannelType.Sftp}].map((option) => (
                     <option key={option.value} value={option.value}>
                     {option.name}
                     </option>

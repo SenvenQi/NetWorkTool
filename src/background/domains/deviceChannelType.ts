@@ -4,4 +4,6 @@ export enum DeviceChannelType{
     HttpServer,
     HidDevice,
     UdpDevice,
+    Ssh,
+    Sftp,
 }

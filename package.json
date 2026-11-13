@@ -18,7 +18,8 @@
     "test:electron": "electron tests/electron-smoke.cjs",
     "test:packaged": "node tests/packaged-smoke.cjs",
     "test:database": "electron tests/database-concurrency.cjs",
-    "test:ui": "node tests/ui-smoke.cjs"
+    "test:ui": "node tests/ui-smoke.cjs",
+    "test:remote-ui": "node tests/remote-ui-smoke.cjs"
   },
   "keywords": [
     "Electron",
@@ -32,6 +33,7 @@
     "@electron/rebuild": "^4.2.1",
     "@types/formidable": "^3.4.6",
     "@types/node": "^16.18.0",
+    "@types/ssh2": "^1.15.6",
     "@typescript-eslint/eslint-plugin": "^4.33.0",
     "@typescript-eslint/parser": "^4.33.0",
     "concurrently": "^6.4.0",
@@ -50,6 +52,7 @@
     "node-hid": "^3.3.0",
     "reflect-metadata": "^0.1.13",
     "serialport": "^13.0.0",
+    "ssh2": "^1.17.0",
     "typeorm": "^0.3.28"
   },
   "build": {

@@ -1,4 +1,6 @@
 export const deviceActions = new Set([
+    "inspectSshHost", "chooseSshKey", "connectRemote", "remoteSnapshot", "remoteWrite", "remoteResize",
+    "sftpAction", "sftpTransfer", "cancelSftpTransfer",
     "close", "min", "max", "addDevice", "addCommand", "loadCommand", "copyToClipborard",
     "connectDevice", "closeDevice", "removeDevice", "sendMessage", "loadData", "getHidDevices", "getPorts"
 ]);

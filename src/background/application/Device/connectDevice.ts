@@ -21,11 +21,13 @@ export class ConnectDeviceRequestHandler implements IRequsetHandler<ConnectDevic
     handle(command: ConnectDeviceRequest): Promise<void> {
         return this.deviceRepo.getDevice(command.deivce.address).then((device) => {
             if (!device) return
-            this.deviceManager.addDeviceClient({
+            const options = device.option ? JSON.parse(device.option) : {};
+            if (device.channelType === 5 || device.channelType === 6) options.auth = command.deivce.auth;
+            return this.deviceManager.addDeviceClient({
                 deviceType: device.type,
                 deviceChannelType: device.channelType,
                 address:device.address,
-                options:device.option != ""? JSON.parse(device.option):""
+                options
             })
         })
     }

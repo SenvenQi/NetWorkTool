@@ -30,6 +30,7 @@ import {
     sendMessage
 } from '../stores/device/actions';
 import Device from '../components/device';
+import RemoteWorkspace from '../components/remoteWorkspace';
 import DeviceDialog from '../components/deviceDialog';
 import Add from '@mui/icons-material/Add';
 import Remove from '@mui/icons-material/Remove';
@@ -134,6 +135,7 @@ const Home = (props: any) => {
     </Paper>;
 
     const renderForm = () => {
+        if ([DeviceChannelType.Ssh, DeviceChannelType.Sftp].includes(props.selectedDevice?.deviceChannelType)) return <RemoteWorkspace key={props.selectedDevice.address} device={props.selectedDevice}/>;
         if (props.selectedDevice) {
             return <>
                 <Toolbar variant="dense" sx={{px: 1, gap: 1, whiteSpace: "nowrap"}}>

@@ -21,8 +21,11 @@ export class MainStartup {
                 const controller = accessor.get(IDeviceController);
                 return (controller as any)[action](data);
             };
-            // Keep window controls responsive; device/database requests must retain their order.
-            return ["close", "min", "max", "copyToClipborard", "getPorts", "getHidDevices"].includes(action)
+            // Keep terminal input and transfer cancellation responsive during long remote operations.
+            // Existing device/database mutations retain their submission order.
+            return ["close", "min", "max", "copyToClipborard", "getPorts", "getHidDevices",
+                "inspectSshHost", "chooseSshKey", "connectRemote", "remoteSnapshot", "remoteWrite", "remoteResize",
+                "sftpAction", "sftpTransfer", "cancelSftpTransfer"].includes(action)
                 ? invoke() : operations.run(invoke);
         });
         app.whenReady().then(async () => {

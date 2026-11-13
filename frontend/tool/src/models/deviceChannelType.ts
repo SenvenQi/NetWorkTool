@@ -3,5 +3,7 @@ export enum DeviceChannelType{
     Serialport,
     HttpServer,
     HidDevice,
-    UdpDevice
+    UdpDevice,
+    Ssh,
+    Sftp
 }

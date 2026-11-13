@@ -1,3 +1,4 @@
+import { sshEndpoint } from "./sshOptions";
 import { DeviceChannelType } from "../domains/deviceChannelType";
 import { DeviceType } from "../domains/deviceType";
 import { parseEndpoint, parsePort } from "./endpoint";
@@ -6,7 +7,7 @@ export function validateDevice(input: any) {
         typeof input.address !== "string" || !input.address.trim()) throw new Error("设备名称和地址不能为空");
     const channel = Number(input.deviceChannelType);
     const type = Number(input.deviceType);
-    if (!Number.isInteger(channel) || channel < 0 || channel > 4 ||
+    if (!Number.isInteger(channel) || channel < 0 || channel > 6 ||
         ![DeviceType.base, DeviceType.voice].includes(type)) throw new Error("无效的设备类型");
     let address = input.address.trim();
     if (input.option !== undefined && input.option !== null && (typeof input.option !== "object" || Array.isArray(input.option))) throw new Error("无效的设备参数");
@@ -19,6 +20,11 @@ export function validateDevice(input: any) {
         const remoteAddress = option.remoteAddress ?? "255.255.255.255";
         if (typeof remoteAddress !== "string" || !remoteAddress.trim() || /\s/.test(remoteAddress.trim())) throw new Error("UDP 目标地址不能为空或包含空白");
         option = { remotePort: parsePort(String(option.remotePort ?? 1500)), remoteAddress: remoteAddress.trim() };
+    }
+    if (channel === DeviceChannelType.Ssh || channel === DeviceChannelType.Sftp) {
+        address = sshEndpoint(address, channel === DeviceChannelType.Ssh ? "ssh" : "sftp").address;
+        // Only non-secret settings can be persisted.
+        option = {username: typeof option.username === "string" ? option.username.trim().slice(0, 256) : ""};
     }
     return {...input, option, name: input.name.trim(), address, deviceType: type, deviceChannelType: channel};
 }

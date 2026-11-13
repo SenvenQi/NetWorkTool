@@ -1,3 +1,4 @@
+import SshDeviceClient from "./sshDeviceClient";
 import IDeviceOption from "../domains/deviceOption";
 import DeviceSocketClient from './deviceSocketClient'
 import {Buffer} from "buffer";
@@ -22,10 +23,10 @@ export default class DeviceManager implements IDeviceManager {
         this.windowService.sendMessage(data);
     }
 
-    addDeviceClient(deviceOptions: IDeviceOption) {
+    addDeviceClient(deviceOptions: IDeviceOption): void | Promise<void> {
         let device = this.deviceClients.find(item => item.address === deviceOptions.address);
         if (!device) {
-            let deviceClient: IDevice & { connect(): void };
+            let deviceClient: IDevice & { connect(): void | Promise<void> };
             // Events from a disposed connection must never mutate its replacement.
             const push = (data: ResultMessage) => {
                 if (!this.deviceClients.includes(deviceClient)) return;
@@ -38,6 +39,10 @@ export default class DeviceManager implements IDeviceManager {
                 if (this.deviceClients.includes(deviceClient)) this.removeDeviceClient(address);
             };
             switch (deviceOptions.deviceChannelType) {
+                case DeviceChannelType.Ssh:
+                case DeviceChannelType.Sftp:
+                    deviceClient = new SshDeviceClient(deviceOptions, push);
+                    break;
                 case DeviceChannelType.HttpServer:
                     deviceClient = new DeviceHttpServer(deviceOptions,push,remove)
                     break;
@@ -57,13 +62,15 @@ export default class DeviceManager implements IDeviceManager {
             if (!deviceClient) throw new Error("不支持的设备通道");
             this.deviceClients.push(deviceClient);
             this.connecting.add(deviceOptions.address);
-            try { deviceClient.connect(); } catch (error) {
+            try { return deviceClient.connect(); } catch (error) {
                 this.removeDeviceClient(deviceOptions.address);
                 throw error;
             }
         } else if (device.state === false && !this.connecting.has(device.address)) {
             this.removeDeviceClient(device.address);
-            this.addDeviceClient(deviceOptions);
+            return this.addDeviceClient(deviceOptions);
+        } else if (device instanceof SshDeviceClient) {
+            return device.connect();
         }
     }
 

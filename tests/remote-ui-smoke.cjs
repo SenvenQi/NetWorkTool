@@ -1,0 +1,143 @@
+const {_electron} = require('playwright-core');
+const assert = require('node:assert/strict');
+const fs = require('node:fs/promises');
+const path = require('node:path');
+const os = require('node:os');
+const {createSshServer} = require('./helpers/ssh-server.cjs');
+
+(async () => {
+    const server = await createSshServer();
+    const profile = await fs.mkdtemp(path.join(os.tmpdir(), 'networktool-remote-ui-'));
+    const output = path.resolve('test-results/ui');
+    await fs.mkdir(output, {recursive: true});
+    const source = path.join(profile, '上传测试.bin');
+    const destination = path.join(profile, 'download.bin');
+    const privateKeyFile = path.join(profile, 'test-key.pem');
+    const bytes = Buffer.from(Array.from({length: 16384}, (_, index) => index % 256));
+    await fs.writeFile(source, bytes); await fs.writeFile(privateKeyFile, server.privateKey);
+    await fs.writeFile(path.join(server.root, 'large.bin'), Buffer.alloc(1024 * 1024, 0xfe));
+    let app;
+    try {
+        const args = [path.join(__dirname, 'ui-fixture.cjs')];
+        if (process.platform === 'linux') args.unshift('--no-sandbox', '--ozone-platform=headless', '--disable-gpu');
+        app = await _electron.launch({executablePath: require('electron'), args, env: {...process.env, NETWORKTOOL_TEST_USER_DATA: profile}});
+        const page = await app.firstWindow(); page.setDefaultTimeout(15000);
+        const errors = []; page.on('pageerror', error => errors.push(error.message));
+        const cdp = await page.context().newCDPSession(page);
+        await cdp.send('Emulation.setDeviceMetricsOverride', {width: 800, height: 600, deviceScaleFactor: 1, mobile: false});
+        const button = name => page.getByRole('button', {name, exact: true});
+        const row = name => page.getByRole('row').filter({has: page.getByRole('cell', {name, exact: true})});
+        async function addDevice(name, channel) {
+            await button('添加设备').click();
+            const dialog = page.getByRole('dialog');
+            await dialog.getByLabel('名称', {exact: true}).fill(name);
+            await dialog.getByLabel('协议', {exact: true}).selectOption(String(channel));
+            await dialog.getByLabel('地址', {exact: true}).fill(`127.0.0.1:${server.port}`);
+            await dialog.getByLabel('默认用户名（可选）', {exact: true}).fill('tester');
+            await dialog.getByRole('button', {name: '确定', exact: true}).click();
+            await dialog.waitFor({state: 'hidden'});
+            await page.getByText(name, {exact: true}).first().waitFor();
+        }
+        async function authDialog() {
+            await button('连接').click();
+            const dialog = page.getByRole('dialog');
+            await dialog.getByText(server.fingerprint, {exact: true}).waitFor();
+            assert.equal(await dialog.getByRole('button', {name: '连接', exact: true}).isEnabled(), false);
+            await dialog.getByLabel('已核对服务器指纹', {exact: true}).check();
+            assert.equal(await dialog.getByLabel('用户名', {exact: true}).inputValue(), 'tester');
+            return dialog;
+        }
+        async function noOverflow() {
+            assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.documentElement.scrollHeight <= innerHeight), true);
+        }
+        await addDevice('SSH 窗口测试', 5);
+        let dialog = await authDialog();
+        await dialog.getByLabel('密码', {exact: true}).fill('wrong-password');
+        await dialog.getByRole('button', {name: '连接', exact: true}).click();
+        await dialog.getByRole('alert').filter({hasText: /authentication/i}).waitFor();
+        await dialog.getByLabel('密码', {exact: true}).fill('test-password');
+        await dialog.getByRole('button', {name: '连接', exact: true}).click();
+        await dialog.waitFor({state: 'hidden'});
+        await button('断开连接').waitFor();
+        const input = page.locator('.xterm-helper-textarea');
+        await input.focus(); await input.pressSequentially('echo ui-shell-ok'); await input.press('Enter');
+        await page.waitForFunction(() => document.querySelector('.xterm-rows')?.textContent.includes('ui-shell-ok'));
+        await noOverflow();
+        await page.getByRole('alert').last().waitFor({state: 'hidden'});
+        await page.screenshot({path: path.join(output, 'ssh-800x600.png')});
+        await button('断开连接').click(); await button('连接').waitFor();
+        dialog = await authDialog();
+        assert.equal(await dialog.getByLabel('密码', {exact: true}).inputValue(), '');
+        await dialog.getByLabel('认证方式', {exact: true}).selectOption('key');
+        await app.evaluate((_electron, filename) => { global.testFileDialogs.open = filename; }, privateKeyFile);
+        await dialog.getByRole('button', {name: '选择私钥文件', exact: true}).click();
+        await page.waitForFunction(() => [...document.querySelectorAll('textarea')].some(input => input.value.includes('PRIVATE KEY')));
+        await dialog.getByRole('button', {name: '连接', exact: true}).click();
+        await dialog.waitFor({state: 'hidden'}); await button('断开连接').waitFor();
+        assert.ok(server.authenticated.includes('publickey'));
+        console.log('Remote UI: SSH fingerprint confirmation, failed-password retry, interactive shell, private-key file and reconnect passed.');
+
+        await addDevice('SFTP 窗口测试', 6);
+        dialog = await authDialog();
+        await dialog.getByLabel('密码', {exact: true}).fill('test-password');
+        await dialog.getByRole('button', {name: '连接', exact: true}).click();
+        await dialog.waitFor({state: 'hidden'});
+        await row('large.bin').waitFor();
+        await button('新建目录').click();
+        await page.getByRole('dialog').getByLabel('新名称').fill('测试目录');
+        await page.getByRole('dialog').getByRole('button', {name: '确定', exact: true}).click();
+        await page.getByRole('dialog').waitFor({state: 'hidden'});
+        await page.getByRole('row').filter({hasText: '测试目录'}).dblclick();
+        await page.waitForFunction(() => document.querySelector('input[aria-invalid="false"]')?.value === '/测试目录');
+        await app.evaluate((_electron, filename) => { global.testFileDialogs.open = filename; }, source);
+        await button('上传').click();
+        await row('上传测试.bin').waitFor();
+        assert.deepEqual(await fs.readFile(path.join(server.root, '测试目录/上传测试.bin')), bytes);
+        await row('上传测试.bin').click();
+        await button('重命名').click();
+        await page.getByRole('dialog').getByLabel('新名称').fill('renamed.bin');
+        await page.getByRole('dialog').getByRole('button', {name: '确定', exact: true}).click();
+        await page.getByRole('dialog').waitFor({state: 'hidden'});
+        await row('renamed.bin').click();
+        await app.evaluate((_electron, filename) => { global.testFileDialogs.save = filename; }, destination);
+        await button('下载').click();
+        await page.getByText(/下载.*已完成/).waitFor();
+        assert.deepEqual(await fs.readFile(destination), bytes);
+        await noOverflow();
+        await page.getByRole('alert').last().waitFor({state: 'hidden'});
+        await page.screenshot({path: path.join(output, 'sftp-800x600.png')});
+        await row('renamed.bin').click();
+        await button('删除').click();
+        await page.getByRole('dialog').getByRole('button', {name: '取消', exact: true}).click();
+        assert.deepEqual(await fs.readFile(path.join(server.root, '测试目录/renamed.bin')), bytes);
+        await button('删除').click();
+        await page.getByRole('dialog').getByRole('button', {name: '确定', exact: true}).click();
+        await row('renamed.bin').waitFor({state: 'hidden'});
+        await button('上级').click(); await row('large.bin').waitFor();
+        await row('large.bin').click();
+        server.slowReads = true;
+        await button('下载').click(); await button('取消传输').click();
+        await page.getByText(/^下载 .* · 已取消$/).waitFor();
+        assert.deepEqual(await fs.readFile(destination), bytes);
+        const files = await fs.readdir(profile);
+        assert.ok(!files.some(file => file.endsWith('.part')));
+        await button('刷新').click(); await row('large.bin').waitFor();
+        await cdp.send('Emulation.setDeviceMetricsOverride', {width: 1280, height: 800, deviceScaleFactor: 1, mobile: false});
+        await noOverflow(); await page.screenshot({path: path.join(output, 'sftp-1280x800.png')});
+        const saved = await app.evaluate(() => global.readSavedDevices());
+        const remote = saved.filter(device => device.channelType >= 5);
+        assert.equal(remote.length, 2);
+        assert.ok(remote.every(device => !/password|privateKey|passphrase|PRIVATE KEY/.test(device.option)));
+        await page.reload(); await button('断开连接').waitFor();
+        await page.getByText('SFTP 窗口测试', {exact: true}).first().click();
+        await row('large.bin').waitFor();
+        assert.deepEqual(errors, []);
+        console.log('Remote UI: SFTP browse/mkdir/upload/rename/download/delete/cancel, credential exclusion, reload and both window sizes passed.');
+    } catch (error) {
+        if (app) await (await app.firstWindow()).screenshot({path: path.join(output, 'remote-failure.png')}).catch(() => {});
+        throw error;
+    } finally {
+        await app?.close(); await server.close();
+        await fs.rm(profile, {recursive: true, force: true, maxRetries: 5, retryDelay: 100});
+    }
+})().catch(error => { console.error(error); process.exitCode = 1; });
