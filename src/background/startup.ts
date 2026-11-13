@@ -1,3 +1,4 @@
+import { AsyncQueue } from "./commons/asyncQueue";
 import { app, BrowserWindow, ipcMain, Menu } from "electron";
 import { IWindowService } from "./service/windowService";
 import { ServicesAccessor } from "./commons/dependencyInjection/instantiation";
@@ -8,14 +9,21 @@ import { getDeviceAction } from "./service/ipcRoutes";
 export class MainStartup {
     constructor(windowService: IWindowService, accessor: ServicesAccessor) {
         Menu.setApplicationMenu(Menu.buildFromTemplate([{ role: "editMenu" }]));
+        const operations = new AsyncQueue();
         ipcMain.handle("device", async (event, route: unknown, data: any) => {
             if (event.sender !== windowService.mainWindow?.webContents || event.senderFrame !== event.sender.mainFrame) {
                 throw new Error("Untrusted IPC sender");
             }
             const action = getDeviceAction(route);
-            await accessor.get(IDatabaseManager).ready;
-            const controller = accessor.get(IDeviceController);
-            return (controller as any)[action](data);
+            const invoke = async () => {
+                await accessor.get(IDatabaseManager).ready;
+                if (event.sender.isDestroyed() || event.sender !== windowService.mainWindow?.webContents) return;
+                const controller = accessor.get(IDeviceController);
+                return (controller as any)[action](data);
+            };
+            // Keep window controls responsive; device/database requests must retain their order.
+            return ["close", "min", "max", "copyToClipborard", "getPorts", "getHidDevices"].includes(action)
+                ? invoke() : operations.run(invoke);
         });
         app.whenReady().then(async () => {
             await accessor.get(IDatabaseManager).ready;

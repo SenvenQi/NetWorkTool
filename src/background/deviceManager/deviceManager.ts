@@ -12,6 +12,7 @@ import HidDeviceClient from "./hidDeviceClient";
 import UdpDeviceClient from "./udpDeviceClient";
 
 export default class DeviceManager implements IDeviceManager {
+    private readonly connecting = new Set<string>();
     public deviceClients: IDevice[];
     constructor(@IMainWindowService private windowService:IWindowService) {
         this.deviceClients = [];
@@ -24,31 +25,43 @@ export default class DeviceManager implements IDeviceManager {
     addDeviceClient(deviceOptions: IDeviceOption) {
         let device = this.deviceClients.find(item => item.address === deviceOptions.address);
         if (!device) {
-            let deviceClient;
+            let deviceClient: IDevice & { connect(): void };
+            // Events from a disposed connection must never mutate its replacement.
+            const push = (data: ResultMessage) => {
+                if (!this.deviceClients.includes(deviceClient)) return;
+                if (data.type === "RECIVE_MESSAGE" && typeof data.data.message?.success === "boolean") {
+                    this.connecting.delete(deviceOptions.address);
+                }
+                this.sendMessage(data);
+            };
+            const remove = (address: string) => {
+                if (this.deviceClients.includes(deviceClient)) this.removeDeviceClient(address);
+            };
             switch (deviceOptions.deviceChannelType) {
                 case DeviceChannelType.HttpServer:
-                    deviceClient = new DeviceHttpServer(deviceOptions,this.sendMessage.bind(this),this.removeDeviceClient.bind(this))
+                    deviceClient = new DeviceHttpServer(deviceOptions,push,remove)
                     break;
                 case DeviceChannelType.Serialport:
-                    deviceClient = new DeviceSerialportClient(deviceOptions,this.sendMessage.bind(this),this.removeDeviceClient.bind(this))
+                    deviceClient = new DeviceSerialportClient(deviceOptions,push,remove)
                     break;
                 case DeviceChannelType.Socket:
-                    deviceClient = new DeviceSocketClient(deviceOptions,this.sendMessage.bind(this),this.removeDeviceClient.bind(this))
+                    deviceClient = new DeviceSocketClient(deviceOptions,push,remove)
                     break;
                 case DeviceChannelType.HidDevice:
-                    deviceClient = new HidDeviceClient(deviceOptions,this.sendMessage.bind(this),this.removeDeviceClient.bind(this))
+                    deviceClient = new HidDeviceClient(deviceOptions,push,remove)
                     break;
                 case DeviceChannelType.UdpDevice:
-                    deviceClient = new UdpDeviceClient(deviceOptions,this.sendMessage.bind(this),this.removeDeviceClient.bind(this))
+                    deviceClient = new UdpDeviceClient(deviceOptions,push,remove)
                     break;
             }
             if (!deviceClient) throw new Error("不支持的设备通道");
             this.deviceClients.push(deviceClient);
+            this.connecting.add(deviceOptions.address);
             try { deviceClient.connect(); } catch (error) {
                 this.removeDeviceClient(deviceOptions.address);
                 throw error;
             }
-        } else if (device.state === false) {
+        } else if (device.state === false && !this.connecting.has(device.address)) {
             this.removeDeviceClient(device.address);
             this.addDeviceClient(deviceOptions);
         }
@@ -64,10 +77,15 @@ export default class DeviceManager implements IDeviceManager {
         const deviceClient = this.deviceClients.find(item => item.address === address);
         if (deviceClient) {
             this.deviceClients = this.deviceClients.filter(item => item !== deviceClient);
+            this.connecting.delete(address);
             deviceClient.state = false;
-            deviceClient.dispose();
+            try { deviceClient.dispose(); }
+            catch (error) {
+                this.windowService.sendMessage({type: "RECIVE_MESSAGE", data: {messageType: MessageType.Error,
+                    message: {success: false, address, info: `关闭设备失败: ${error}`}}});
+            }
             this.windowService.sendMessage({type:"RECIVE_MESSAGE",data:{ messageType: MessageType.ChangeState, message: { success: false, address: address, info: "连接已断开" } }})
-            this.deviceClients = this.deviceClients.filter(item => item.address !== address);
+
         }
     }
 }

@@ -44,6 +44,7 @@ npm run lint
 npm test
 npm --prefix frontend/tool test
 npm run build
+npm run test:database
 npm run test:electron
 # 在打包后验证实际安装目录：
 npm run test:packaged
@@ -54,3 +55,7 @@ npm --prefix frontend/tool audit
 Electron 集成测试使用临时用户目录，验证旧 SQLite 数据兼容、页面与 preload 加载、IPC 拒绝、设备增删、TCP 回环及 UTF-8 命令。Linux 无显示环境可运行 `npm run test:electron -- --no-sandbox --ozone-platform=headless`；`--no-sandbox` 仅用于隔离测试环境，不是应用默认配置。
 
 TCP、UDP、HTTP 有本机回环回归测试；串口和 HID 的真实收发仍需连接物理设备验证。Windows 安装包应在 Windows runner 上构建验证。
+
+设备和数据库请求按提交顺序处理，重复连接不会重建正在连接的设备；刷新界面时读取主进程的实时连接状态。单次 HTTP 请求中断或 UDP 发送失败只报告操作错误，不会把仍在监听的设备标为断线。
+
+GitHub Actions 的 Windows 检查会生成 x64 NSIS 安装包，并启动打包程序验证页面、IPC 和数据库。通过后可在对应运行的 Artifacts 中下载 `network-tool-windows-x64`（保留 14 天）。

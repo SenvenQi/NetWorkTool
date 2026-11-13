@@ -20,6 +20,15 @@ jobs:
       - run: npm test
       - run: npm --prefix frontend/tool test
       - run: npm run build
+      - run: npm run test:database
       - run: npm run test:electron
       - run: npx electron-builder --win nsis --x64 --publish never
       - run: npm run test:packaged
+      - uses: actions/upload-artifact@v4
+        with:
+          name: network-tool-windows-x64
+          path: |
+            build/*.exe
+            build/*.exe.blockmap
+          if-no-files-found: error
+          retention-days: 14

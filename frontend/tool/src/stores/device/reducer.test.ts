@@ -21,3 +21,15 @@ test('receive history is bounded', () => {
     const next = reducer({...state, messages:Array(1000).fill({})}, {type:'RECIVE_MESSAGE', data:{messageType:0, message:{address:'a'}}});
     expect(next.messages).toHaveLength(1000);
 });
+test('reloading device data restores live states and preserves the selected address', () => {
+    const next = reducer({...state, selectedDevice:second}, {type:'CALL_BACK_INIT_DATA', data:[
+        {address:'a', name:'A', state:false, type:0, channelType:0},
+        {address:'b', name:'B', state:true, type:0, channelType:0},
+    ]});
+    expect(next.selectedDevice.address).toBe('b');
+    expect(next.selectedDevice.state).toBe(true);
+});
+test('operation errors without a disconnect flag preserve connection state', () => {
+    const next = reducer(state, {type:'RECIVE_MESSAGE', data:{messageType:2, message:{address:'a', info:'send failed'}}});
+    expect(next.selectedDevice.state).toBe(true);
+});

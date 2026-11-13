@@ -14,8 +14,9 @@ export abstract class HidClient implements IDisposable{
     abstract onData(data:any):void;
 
     private init(): void {
-        this.hidClient.on('error', this.onError.bind(this))
-        this.hidClient.on('data', this.onData.bind(this))
+        const client = this.hidClient;
+        client.on('error', error => { if (this.hidClient === client) this.onError(error); });
+        client.on('data', data => { if (this.hidClient === client) this.onData(data); });
     }
 
     connect() {
@@ -29,8 +30,9 @@ export abstract class HidClient implements IDisposable{
     }
 
     dispose(): void {
-        this.hidClient?.close()
+        const client = this.hidClient;
         delete this.hidClient;
+        client?.close();
     }
 
 }

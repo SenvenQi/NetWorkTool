@@ -26,6 +26,11 @@ export default class UdpDeviceClient extends UdpClient implements IDevice {
         this.pushAction({type:"RECIVE_MESSAGE",data:{messageType:MessageType.Error,message:{success:false,address:this.address,info:`udp出现错误${error}`}}})
     }
 
+    protected onSendError(error: any): void {
+        this.pushAction({type:"RECIVE_MESSAGE", data:{messageType:MessageType.Error,
+            message:{address:this.address, info:`UDP 发送失败: ${error}`}}});
+    }
+
     onData(data: any): void {
         const recivePackage = this.filter.filter(data);
         this.pushAction({type:"RECIVE_MESSAGE",data:{messageType:MessageType.Info,message:{time:Date.now(),address:this.address,...recivePackage}}});

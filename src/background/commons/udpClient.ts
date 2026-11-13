@@ -5,6 +5,7 @@ export abstract class UdpClient implements IDisposable {
     udpClient: dgram.Socket;
     protected constructor(private socketAddress: string, private options: { remoteAddress?: string; remotePort?: number } = {}) {}
     abstract onError(error: any): void;
+    protected onSendError(error: any) { this.onError(error); }
     abstract onOpen(): void;
     abstract onData(data: any): void;
     connect() {
@@ -19,8 +20,9 @@ export abstract class UdpClient implements IDisposable {
     }
     send(command: Uint8Array) {
         if (!this.udpClient) throw new Error("UDP 未连接");
-        this.udpClient.send(command, this.options.remotePort ?? 1500, this.options.remoteAddress || "255.255.255.255", error => {
-            if (error) this.onError(error);
+        const socket = this.udpClient;
+        socket.send(command, this.options.remotePort ?? 1500, this.options.remoteAddress || "255.255.255.255", error => {
+            if (error && this.udpClient === socket) this.onSendError(error);
         });
     }
     dispose() {

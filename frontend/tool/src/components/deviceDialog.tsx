@@ -38,7 +38,7 @@ export default function FormDialog(props:any) {
      }
      if (deviceChannelType === DeviceChannelType.UdpDevice) {
          return <>
-             <TextField fullWidth sx={{p:1}} label="目标地址" value={options.remoteAddress || "255.255.255.255"}
+             <TextField fullWidth sx={{p:1}} label="目标地址" value={options.remoteAddress ?? "255.255.255.255"}
                  onChange={event => setOptions({...options, remoteAddress: event.target.value})} />
              <TextField fullWidth sx={{p:1}} label="目标端口" type="number" value={options.remotePort ?? 1500}
                  onChange={event => setOptions({...options, remotePort: Number(event.target.value)})} />

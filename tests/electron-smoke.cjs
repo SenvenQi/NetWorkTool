@@ -51,6 +51,8 @@ app.once('browser-window-created', (_event, window) => {
                 try { await api.send('device/addDevice', {name:'重复', address, option:{}, deviceType:0, deviceChannelType:0}); } catch { duplicate = true; }
                 if (!duplicate) throw new Error('Duplicate device accepted');
                 await exchange('connectDevice', {address}, 'RECIVE_MESSAGE');
+                const refreshed = await exchange('loadData', undefined, 'CALL_BACK_INIT_DATA');
+                if (!refreshed.find(d => d.address === address)?.state) throw new Error('Refresh lost live connection state');
                 const received = await exchange('sendMessage', {address, message:'00ff'}, 'RECIVE_MESSAGE');
                 if (received.message.message[1] !== 255) throw new Error('TCP round trip failed');
                 const command = await exchange('addCommand', {name:'UTF-8', type:1, command:'你好'}, 'CALL_BACK_ADD_COMMAND');

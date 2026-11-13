@@ -16,7 +16,8 @@
     "test": "npm run build:main && node --test tests/*.test.cjs",
     "postinstall": "electron-rebuild --only better-sqlite3",
     "test:electron": "electron tests/electron-smoke.cjs",
-    "test:packaged": "node tests/packaged-smoke.cjs"
+    "test:packaged": "node tests/packaged-smoke.cjs",
+    "test:database": "electron tests/database-concurrency.cjs"
   },
   "keywords": [
     "Electron",

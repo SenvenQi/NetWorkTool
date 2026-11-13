@@ -114,3 +114,94 @@ test('UDP sends to configured destination and receives a reply', async t => {
     assert.equal((await reply).toString(), 'udp');
     client.dispose(); client.dispose();
 });
+test('queued operations retain order and recover after rejection', async () => {
+    const { AsyncQueue } = require('../dist/commons/asyncQueue');
+    const queue = new AsyncQueue();
+    const events = [];
+    let release;
+    const first = queue.run(async () => { events.push('first'); await new Promise(r => release = r); });
+    const second = queue.run(() => { events.push('second'); throw new Error('expected'); });
+    const rejected = assert.rejects(second, /expected/);
+    const third = queue.run(() => events.push('third'));
+    await Promise.resolve();
+    assert.deepEqual(events, ['first']);
+    release(); await first; await rejected; await third;
+    assert.deepEqual(events, ['first', 'second', 'third']);
+});
+test('duplicate connect does not replace a pending client, and stale callbacks cannot affect a replacement', async t => {
+    const DeviceManager = require('../dist/deviceManager/deviceManager').default;
+    const messages = [];
+    const manager = new DeviceManager({sendMessage: message => messages.push(message)});
+    const sockets = new Set();
+    const server = net.createServer(socket => { sockets.add(socket); socket.on('close', () => sockets.delete(socket)); });
+    server.listen(0, '127.0.0.1'); await once(server, 'listening');
+    const address = `127.0.0.1:${server.address().port}`;
+    t.after(() => { manager.removeDeviceClient(address); for (const socket of sockets) socket.destroy(); server.close(); });
+    const options = {address, deviceType:0, deviceChannelType:0, options:{}};
+    manager.addDeviceClient(options);
+    const first = manager.deviceClients[0];
+    manager.addDeviceClient(options);
+    assert.equal(manager.deviceClients[0], first);
+    manager.removeDeviceClient(address);
+    manager.addDeviceClient(options);
+    const replacement = manager.deviceClients[0];
+    const before = messages.length;
+    first.onError(new Error('late error'));
+    first.onData(Buffer.from('late data'));
+    first.onClose();
+    assert.equal(manager.deviceClients[0], replacement);
+    assert.equal(messages.length, before);
+});
+test('HTTP client abort leaves the listener available and disposal suppresses late listening events', async t => {
+    let opened, aborted;
+    const errors = [];
+    class Server extends HttpServer {
+        onConnect() { opened(); }
+        onData() {}
+        onError(error) { errors.push(error); }
+        onRequestError(error) { aborted(error); }
+    }
+    const server = new Server(0);
+    t.after(() => server.dispose());
+    const ready = new Promise(r => opened = r);
+    server.connect(); await ready;
+    const httpServer = server.httpServer;
+    const requestArrived = once(httpServer, 'request');
+    const abort = new Promise(r => aborted = r);
+    const socket = net.createConnection(httpServer.address().port, '127.0.0.1');
+    await once(socket, 'connect');
+    socket.write('POST / HTTP/1.1\r\nHost: localhost\r\nContent-Length: 100\r\n\r\nx');
+    await requestArrived; socket.destroy(); await abort;
+    assert.equal(httpServer.listening, true);
+    assert.equal(errors.length, 0);
+    const status = await new Promise((resolve, reject) => {
+        http.get(`http://127.0.0.1:${httpServer.address().port}`, res => { res.resume(); res.on('end', () => resolve(res.statusCode)); }).on('error', reject);
+    });
+    assert.equal(status, 200);
+    let late = false; opened = () => late = true;
+    server.dispose(); httpServer.emit('listening');
+    assert.equal(late, false);
+});
+test('UDP send failure keeps a bound device connected and ignores callbacks after disposal', () => {
+    const UdpDevice = require('../dist/deviceManager/udpDeviceClient').default;
+    const events = [];
+    const device = new UdpDevice({address:'1234', options:{}, deviceType:0}, message => events.push(message));
+    let callback;
+    device.udpClient = {send: (_data, _port, _host, done) => callback = done, close() {}};
+    device.state = true;
+    device.send(Buffer.from('hello'));
+    callback(new Error('DNS lookup failed'));
+    assert.equal(device.state, true);
+    assert.equal(events[0].data.message.success, undefined);
+    const before = events.length;
+    device.dispose(); callback(new Error('late DNS failure'));
+    assert.equal(events.length, before);
+});
+test('UDP validation normalizes ports and rejects invalid targets before saving', () => {
+    const input = {name:'udp', address:'01234', deviceType:0, deviceChannelType:4};
+    assert.equal(validateDevice(input).address, '1234');
+    assert.deepEqual(validateDevice({...input, option:{remotePort:'1500', remoteAddress:' localhost '}}).option, {remotePort:1500, remoteAddress:'localhost'});
+    for (const option of [{remoteAddress:''}, {remoteAddress:{}}, {remotePort:0}, []]) {
+        assert.throws(() => validateDevice({...input, option}));
+    }
+});

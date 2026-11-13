@@ -29,31 +29,19 @@ function reducer(state: any = initialState, action: any) {
                 hidPaths: action.data
             }
         case actionTypes.CALL_BACK_INIT_DATA:
-            let selectDevice = null;
-            if (action.data.length > 0) {
-                selectDevice = {
-                    deviceType: action.data[0].type,
-                    state: false,
-                    name: action.data[0].name,
-                    selected: false,
-                    deviceChannelType: action.data[0].channelType,
-                    address: action.data[0].address
-                };
-            }
+            const loadedDevices = action.data.map((item: any) => ({
+                deviceType: item.type,
+                state: item.state === true,
+                name: item.name,
+                selected: false,
+                deviceChannelType: item.channelType,
+                address: item.address
+            }));
             return {
                 ...state,
-                selectedDevice:selectDevice,
-                devices: action.data.map((item: any) => {
-                    return {
-                        deviceType: item.type,
-                        state: false,
-                        name: item.name,
-                        selected: false,
-                        deviceChannelType: item.channelType,
-                        address: item.address
-                    }
-                })
-            }
+                selectedDevice: loadedDevices.find((item: any) => item.address === state.selectedDevice?.address) ?? loadedDevices[0] ?? null,
+                devices: loadedDevices
+            };
         case actionTypes.RECIVE_MESSAGE:
             switch (action.data.messageType) {
                 case MessageType.Info:
@@ -64,7 +52,7 @@ function reducer(state: any = initialState, action: any) {
                 case MessageType.ChangeState:
                 case MessageType.Error:
                     const tempDevices = state.devices.map((device: any) => {
-                        if (device.address === action.data.message.address) {
+                        if (device.address === action.data.message.address && typeof action.data.message.success === "boolean") {
                             return {...device, state: action.data.message.success}
                         }
                         return device;

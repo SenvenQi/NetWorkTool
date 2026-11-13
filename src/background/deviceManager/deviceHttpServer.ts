@@ -27,6 +27,11 @@ export default class DeviceHttpServer extends HttpServer implements IDevice {
         this.pushAction({type:"RECIVE_MESSAGE",data:{messageType:MessageType.Error,message:{success:false,address:this.address,info:`http监听错误:${error}`}}})
     }
 
+    protected onRequestError(error: any): void {
+        this.pushAction({type:"RECIVE_MESSAGE", data:{messageType:MessageType.Error,
+            message:{address:this.address, info:`HTTP 请求中断: ${error}`}}});
+    }
+
     onConnect(data: any): void {
         this.state = true;
         this.pushAction({type:"RECIVE_MESSAGE",data:{messageType:MessageType.ChangeState,message:{success:true,address:this.address,info:"http监听开启成功"}}})

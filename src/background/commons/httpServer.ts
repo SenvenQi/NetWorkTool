@@ -7,14 +7,15 @@ export default abstract class HttpServer implements IDisposable {
     private connections = new Set<import("net").Socket>();
     protected constructor(private readonly port: number) {}
     protected onError(error: any) {}
+    protected onRequestError(error: any) {}
     abstract onConnect(data?: any): void;
     abstract onData(data: any): void;
-    private requestHandler(req: http.IncomingMessage, res: http.ServerResponse) {
+    private requestHandler(req: http.IncomingMessage, res: http.ServerResponse, isCurrent: () => boolean) {
         const limit = 1024 * 1024;
         const finish = (status: number, text: string) => {
-            if (!res.writableEnded) { res.writeHead(status, {"Content-Type": "text/plain; charset=utf-8"}); res.end(text); }
+            if (!res.writableEnded && !res.destroyed) { res.writeHead(status, {"Content-Type": "text/plain; charset=utf-8"}); res.end(text); }
         };
-        req.on("error", error => { this.onError(error); finish(400, "Invalid request"); });
+        req.on("error", error => { if (isCurrent()) this.onRequestError(error); finish(400, "Invalid request"); });
         if (req.headers["content-type"]?.startsWith("multipart/form-data")) {
             const uploads: string[] = [];
             const form = formidable({ maxFileSize: limit, maxTotalFileSize: limit, maxFiles: 10, maxFieldsSize: limit, maxFields: 100 });
@@ -22,7 +23,7 @@ export default abstract class HttpServer implements IDisposable {
             form.parse(req, (error, fields, files) => {
                 try {
                     if (error) finish(400, "Invalid multipart request");
-                    else { this.onData(JSON.stringify({ fields, files })); finish(200, "OK!"); }
+                    else if (isCurrent()) { this.onData(JSON.stringify({ fields, files })); finish(200, "OK!"); }
                 } finally {
                     for (const file of uploads) void unlink(file).catch(() => {});
                 }
@@ -37,18 +38,19 @@ export default abstract class HttpServer implements IDisposable {
             else chunks.push(chunk);
         });
         req.on("end", () => {
-            if (size > limit) return;
+            if (size > limit || !isCurrent()) return;
             this.onData(Buffer.concat(chunks).toString("utf8"));
             finish(200, "OK!");
         });
     }
     connect() {
         if (this.httpServer) return;
-        const server = http.createServer(this.requestHandler.bind(this));
+        const server: http.Server = http.createServer((req, res) => this.requestHandler(req, res, () => this.httpServer === server));
         this.httpServer = server;
-        server.on("error", error => this.onError(error));
-        server.on("listening", () => this.onConnect());
+        server.on("error", error => { if (this.httpServer === server) this.onError(error); });
+        server.on("listening", () => { if (this.httpServer === server) this.onConnect(); });
         server.on("connection", socket => {
+            if (this.httpServer !== server) { socket.destroy(); return; }
             this.connections.add(socket);
             socket.on("close", () => this.connections.delete(socket));
         });
