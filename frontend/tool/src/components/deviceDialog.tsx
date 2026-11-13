@@ -25,7 +25,7 @@ export default function FormDialog(props:any) {
                                    native:true
                                }
                            }
-			    	placeholder="波特率"
+                    label="波特率"
 			    	variant="standard" >
                  {
                      buadRates.map((item,index)=>{
@@ -66,6 +66,7 @@ export default function FormDialog(props:any) {
 					select
 					variant="standard"
 					value={address}
+                    label="地址"
 					onChange={(event) => setAddress(event.target.value)}
 					SelectProps={{
 						native:true
@@ -84,6 +85,7 @@ export default function FormDialog(props:any) {
 					select
 					variant="standard"
 					value={address}
+                    label="地址"
 					onChange={(event) => setAddress(event.target.value)}
 					SelectProps={{
 						native:true
@@ -101,6 +103,7 @@ export default function FormDialog(props:any) {
         else {
 			return <TextField fullWidth sx={{p:1}}
 				value={address}
+                    label="地址"
 				onChange={(event) => setAddress(event.target.value)}
 				placeholder={deviceChannelType === DeviceChannelType.Socket ? "host:port 或 [IPv6]:port" : "本地监听端口"}
 				variant="standard" />
@@ -108,18 +111,19 @@ export default function FormDialog(props:any) {
 	}
 
   return (
-      <Dialog open={props.open} onClose={props.handleOpen}>
+      <Dialog open={props.open} onClose={props.pending ? undefined : props.handleOpen}>
         <DialogTitle>添加配置</DialogTitle>
         <DialogContent>
 			<TextField
 				fullWidth sx={{p:1}}
 				value={name}
                 onChange={(event) => setName(event.target.value)}
-				placeholder="名称"
+				label="名称" placeholder="名称"
 				variant="standard" />
 			<TextField fullWidth sx={{p:1}}
 				select
-				value={deviceChannelType}
+				label="协议"
+                value={deviceChannelType}
                 onChange={(event) => changeDeviceChannelType(Number(event.target.value) as DeviceChannelType)}
 				variant="standard"
 				SelectProps={{
@@ -139,8 +143,8 @@ export default function FormDialog(props:any) {
             }
         </DialogContent>
         <DialogActions>
-          <Button onClick={props.handleOpen}>取消</Button>
-          <Button onClick={()=>props.handleSubmite(name,address,deviceType,deviceChannelType,options)}>确定</Button>
+          <Button disabled={props.pending} onClick={props.handleOpen}>取消</Button>
+          <Button disabled={props.pending} onClick={()=>props.handleSubmite(name,address,deviceType,deviceChannelType,options)}>{props.pending ? "保存中…" : "确定"}</Button>
         </DialogActions>
       </Dialog>
   );

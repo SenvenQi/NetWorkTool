@@ -33,3 +33,24 @@ test('operation errors without a disconnect flag preserve connection state', () 
     const next = reducer(state, {type:'RECIVE_MESSAGE', data:{messageType:2, message:{address:'a', info:'send failed'}}});
     expect(next.selectedDevice.state).toBe(true);
 });
+test('device save failure permits retry and only success marks the dialog complete', () => {
+    const pending = reducer(undefined, {type: 'ADD_DEVICE'});
+    expect(pending.deviceSaveStatus).toBe('pending');
+    const failed = reducer(pending, {type: 'REQUEST_FAILED', data: {actionType: 'ADD_DEVICE', message: 'invalid port'}});
+    expect(failed.deviceSaveStatus).toBe('failed');
+    expect(failed.devices).toEqual([]);
+    const retry = reducer(failed, {type: 'ADD_DEVICE'});
+    const saved = reducer(retry, {type: 'CALL_BACK_ADD_DEVICE', data: {address: 'localhost:1234', name: 'test', type: 0, channelType: 0}});
+    expect(saved.deviceSaveStatus).toBe('success');
+    expect(saved.devices).toHaveLength(1);
+});
+test('unrelated request failures do not complete or cancel a pending command save', () => {
+    const pending = reducer(undefined, {type: 'ADD_COMMAND'});
+    const unrelated = reducer(pending, {type: 'REQUEST_FAILED', data: {actionType: 'GET_PORTS', message: 'unavailable'}});
+    expect(unrelated.commandSaveStatus).toBe('pending');
+    const failed = reducer(unrelated, {type: 'REQUEST_FAILED', data: {actionType: 'ADD_COMMAND', message: 'invalid hex'}});
+    expect(failed.commandSaveStatus).toBe('failed');
+    const saved = reducer(reducer(failed, {type: 'ADD_COMMAND'}), {type: 'CALL_BACK_ADD_COMMAND', data: {id: 1, name: 'test', hexString: [0]}});
+    expect(saved.commandSaveStatus).toBe('success');
+    expect(saved.commands).toHaveLength(1);
+});

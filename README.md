@@ -46,6 +46,7 @@ npm --prefix frontend/tool test
 npm run build
 npm run test:database
 npm run test:electron
+npm run test:ui
 # 在打包后验证实际安装目录：
 npm run test:packaged
 npm audit
@@ -54,8 +55,12 @@ npm --prefix frontend/tool audit
 
 Electron 集成测试使用临时用户目录，验证旧 SQLite 数据兼容、页面与 preload 加载、IPC 拒绝、设备增删、TCP 回环及 UTF-8 命令。Linux 无显示环境可运行 `npm run test:electron -- --no-sandbox --ozone-platform=headless`；`--no-sandbox` 仅用于隔离测试环境，不是应用默认配置。
 
-TCP、UDP、HTTP 有本机回环回归测试；串口和 HID 的真实收发仍需连接物理设备验证。Windows 安装包应在 Windows runner 上构建验证。
+TCP、UDP、HTTP 使用真实本机 socket 做回环回归，覆盖断线重连、连接拒绝、端口冲突、分段 UTF-8、超限请求、multipart 解析和上传清理。串口使用 SerialPortMock，HID 使用测试专用模拟驱动，覆盖字节收发、拔出、写入失败和重连；真实硬件、驱动兼容性和 HID 报告长度仍需连接物理设备验证。
+
+`npm run test:ui` 在独立临时用户目录启动实际 Electron 窗口，通过界面完成五种协议的添加、连接和收发，以及无效输入修正、命令保存、刷新、复制、删除和布局检查。测试同时检查 800×600、1280×800 窗口，截图保存到 `test-results/ui/`。Linux 自动使用无显示模式；模拟驱动只在测试入口加载，不进入应用或安装包。
+
+设备和命令弹窗在保存成功后关闭，失败时保留输入；未连接设备禁用发送，HTTP 显示监听状态。默认窗口的命令面板以浮层展开，长消息自动换行，关闭的面板不参与键盘导航。Windows 安装包应在 Windows runner 上构建验证。
 
 设备和数据库请求按提交顺序处理，重复连接不会重建正在连接的设备；刷新界面时读取主进程的实时连接状态。单次 HTTP 请求中断或 UDP 发送失败只报告操作错误，不会把仍在监听的设备标为断线。
 
-GitHub Actions 的 Windows 检查会生成 x64 NSIS 安装包，并启动打包程序验证页面、IPC 和数据库。通过后可在对应运行的 Artifacts 中下载 `network-tool-windows-x64`（保留 14 天）。
+GitHub Actions 的 Windows 检查还会上传 `network-tool-ui-screenshots` 截图，并生成 x64 NSIS 安装包，并启动打包程序验证页面、IPC 和数据库。通过后可在对应运行的 Artifacts 中下载 `network-tool-windows-x64`（保留 14 天）。

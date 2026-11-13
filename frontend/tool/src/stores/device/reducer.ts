@@ -3,6 +3,8 @@ import {MessageType} from "../../models/messageType";
 
 const initialState = {
     error: false,
+    deviceSaveStatus: "idle",
+    commandSaveStatus: "idle",
     requestError: null,
     devices: [],
     messages: [],
@@ -16,11 +18,18 @@ const initialState = {
 function reducer(state: any = initialState, action: any) {
 
     switch (action.type) {
+        case actionTypes.ADD_DEVICE:
+            return {...state, deviceSaveStatus: "pending"};
+        case actionTypes.ADD_COMMAND:
+            return {...state, commandSaveStatus: "pending"};
         case "REQUEST_FAILED":
-            return {...state, requestError: action.data};
+            return {...state, requestError: action.data,
+                deviceSaveStatus: action.data.actionType === actionTypes.ADD_DEVICE ? "failed" : state.deviceSaveStatus,
+                commandSaveStatus: action.data.actionType === actionTypes.ADD_COMMAND ? "failed" : state.commandSaveStatus};
         case actionTypes.CALL_BACK_ADD_COMMAND:
             return {
                 ...state,
+                commandSaveStatus: "success",
                 commands:[...state.commands,action.data]
             }
         case actionTypes.SET_HID_DEVCIE:
@@ -77,6 +86,7 @@ function reducer(state: any = initialState, action: any) {
             }
             return {
                 ...state,
+                deviceSaveStatus: "success",
                 devices: [...state.devices.map((item: any) => ({...item, selected: false})), device],
                 selectedDevice: device
             };

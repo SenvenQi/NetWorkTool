@@ -19,7 +19,7 @@ export class Command extends React.Component<any> {
             {
                 this.props.data.map((item: any) => {
                     return <ListItem key={item.id}>
-                        <Card sx={{width: "100%"}}>
+                        <Card sx={{width: "100%", overflowWrap: "anywhere"}}>
                             <CardContent>
                                 <Typography component={'strong'} variant={'body2'} color={'text.secondary'}>
                                     {item.name}
@@ -29,7 +29,7 @@ export class Command extends React.Component<any> {
                                 </Typography>
                             </CardContent>
                             <CardActions>
-                                <Button size={"small"}
+                                <Button size={"small"} disabled={this.props.disabled}
                                         onClick={this.props.sendMessage.bind(this, item.hexString)}>发送</Button>
                             </CardActions>
                         </Card>

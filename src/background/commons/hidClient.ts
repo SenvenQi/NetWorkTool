@@ -20,13 +20,21 @@ export abstract class HidClient implements IDisposable{
     }
 
     connect() {
+        if (this.hidClient) return;
         this.hidClient = new HID(this.path)
         this.init()
         this.onOpen()
     }
 
     public send(command: Buffer) {
-        this.hidClient.write(command)
+        if (!this.hidClient) throw new Error("HID 设备未连接");
+        try {
+            this.hidClient.write(command);
+        } catch (error) {
+            // Native HID writes can fail synchronously without an error event.
+            this.onError(error);
+            throw error;
+        }
     }
 
     dispose(): void {

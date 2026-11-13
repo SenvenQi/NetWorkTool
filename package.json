@@ -17,7 +17,8 @@
     "postinstall": "electron-rebuild --only better-sqlite3",
     "test:electron": "electron tests/electron-smoke.cjs",
     "test:packaged": "node tests/packaged-smoke.cjs",
-    "test:database": "electron tests/database-concurrency.cjs"
+    "test:database": "electron tests/database-concurrency.cjs",
+    "test:ui": "node tests/ui-smoke.cjs"
   },
   "keywords": [
     "Electron",
@@ -28,6 +29,7 @@
   "author": "SevenQi",
   "license": "private",
   "devDependencies": {
+    "@electron/rebuild": "^4.2.1",
     "@types/formidable": "^3.4.6",
     "@types/node": "^16.18.0",
     "@typescript-eslint/eslint-plugin": "^4.33.0",
@@ -37,9 +39,9 @@
     "electron": "^43.8.10",
     "electron-builder": "^26.18.0",
     "eslint": "^7.32.0",
+    "playwright-core": "^1.65.0",
     "typescript": "~4.9.5",
-    "wait-on": "^9.5.1",
-    "@electron/rebuild": "^4.2.1"
+    "wait-on": "^9.5.1"
   },
   "dependencies": {
     "better-sqlite3": "^12.11.1",

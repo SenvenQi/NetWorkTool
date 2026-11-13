@@ -205,3 +205,84 @@ test('UDP validation normalizes ports and rejects invalid targets before saving'
         assert.throws(() => validateDevice({...input, option}));
     }
 });
+
+test('HTTP multipart accepts mixed-case media types, cleans uploads, and survives malformed requests', {timeout: 10000}, async t => {
+    const fs = require('node:fs/promises');
+    let opened;
+    const received = [];
+    class Server extends HttpServer {
+        onConnect() { opened(); }
+        onData(data) { received.push(data); }
+        onError(error) { throw error; }
+    }
+    const server = new Server(0);
+    t.after(() => server.dispose());
+    const ready = new Promise(resolve => opened = resolve);
+    server.connect(); await ready;
+    const url = `http://127.0.0.1:${server.httpServer.address().port}`;
+    const boundary = 'CaseSensitiveBoundary';
+    const body = `--${boundary}\r\nContent-Disposition: form-data; name="title"\r\n\r\n你好\r\n--${boundary}\r\nContent-Disposition: form-data; name="upload"; filename="sample.txt"\r\nContent-Type: text/plain\r\n\r\nsample bytes\r\n--${boundary}--\r\n`;
+    const response = await fetch(url, {method: 'POST', headers: {'Content-Type': `Multipart/Form-Data; boundary=${boundary}`}, body});
+    assert.equal(response.status, 200); await response.text();
+    const parsed = JSON.parse(received[0]);
+    assert.deepEqual(parsed.fields.title, ['你好']);
+    assert.equal(parsed.files.upload[0].size, 12);
+    // Cleanup is asynchronous; allow the unlink callback to finish.
+    await new Promise(resolve => setImmediate(resolve));
+    await assert.rejects(fs.access(parsed.files.upload[0].filepath), {code: 'ENOENT'});
+    for (const [type, payload] of [['multipart/form-data', 'no boundary'], [`multipart/form-data; boundary=${boundary}`, 'invalid framing']]) {
+        const invalid = await fetch(url, {method: 'POST', headers: {'Content-Type': type}, body: payload});
+        assert.equal(invalid.status, 400); await invalid.text();
+    }
+    const oversized = await fetch(url, {method: 'POST', headers: {'Content-Type': `multipart/form-data; boundary=${boundary}`}, body: body.replace('sample bytes', 'x'.repeat(1024 * 1024 + 1))});
+    assert.equal(oversized.status, 400); await oversized.text();
+    assert.equal(received.length, 1);
+    const valid = await fetch(url, {method: 'POST', body: 'still listening'});
+    assert.equal(valid.status, 200); await valid.text();
+    assert.equal(received[1], 'still listening');
+});
+
+test('TCP connection refusal reports failure and can recover on the same endpoint', {timeout: 5000}, async t => {
+    const server = net.createServer(socket => socket.end('recovered'));
+    server.listen(0, '127.0.0.1'); await once(server, 'listening');
+    const port = server.address().port;
+    const closed = once(server, 'close'); server.close(); await closed;
+    let failed, opened, received;
+    class Client extends SocketClient {
+        onError(error) { failed(error); }
+        onConnect() { opened(); }
+        onData(data) { received(data); }
+        onClose() {}
+    }
+    const client = new Client(`127.0.0.1:${port}`);
+    t.after(() => { client.dispose(); server.close(); });
+    const error = new Promise(resolve => failed = resolve);
+    client.connect(); assert.equal((await error).code, 'ECONNREFUSED');
+    client.dispose();
+    server.listen(port, '127.0.0.1'); await once(server, 'listening');
+    const ready = new Promise(resolve => opened = resolve);
+    const data = new Promise(resolve => received = resolve);
+    client.connect(); await ready;
+    assert.equal((await data).toString(), 'recovered');
+});
+
+test('UDP occupied port reports failure and reconnects after release', {timeout: 5000}, async t => {
+    const dgram = require('node:dgram');
+    const { UdpClient } = require('../dist/commons/udpClient');
+    const blocker = dgram.createSocket('udp4');
+    blocker.bind(0); await once(blocker, 'listening');
+    let failed, opened;
+    class Client extends UdpClient {
+        onError(error) { failed(error); }
+        onOpen() { opened(); }
+        onData() {}
+    }
+    const client = new Client(String(blocker.address().port));
+    t.after(() => client.dispose());
+    const failure = new Promise(resolve => failed = resolve);
+    client.connect(); assert.equal((await failure).code, 'EADDRINUSE');
+    client.dispose();
+    const closed = once(blocker, 'close'); blocker.close(); await closed;
+    const ready = new Promise(resolve => opened = resolve);
+    client.connect(); await ready;
+});

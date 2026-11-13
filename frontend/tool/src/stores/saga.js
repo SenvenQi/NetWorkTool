@@ -59,7 +59,7 @@ function* safely(worker, action) {
     try {
         yield call(worker, action);
     } catch (error) {
-        yield put({type: "REQUEST_FAILED", data: {message: error.message || String(error)}});
+        yield put({type: "REQUEST_FAILED", data: {message: (error.message || String(error)).replace(/^Error invoking remote method '[^']+': (?:Error: )?/, ''), actionType: action.type}});
     }
 }
 

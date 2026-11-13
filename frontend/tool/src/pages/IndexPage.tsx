@@ -70,7 +70,6 @@ const StyledBox = styled(Box)(({theme}) => ({
     }
 }))
 
-const AnimatedBox = animated(StyledBox)
 const AnimatedCard = animated(Card)
 
 const Home = (props: any) => {
@@ -79,6 +78,9 @@ const Home = (props: any) => {
     const [openCommand, setOpenCommand] = useState(false);
     const [openCommandDialog, setOpenCommandDialog] = useState(false);
 
+    useEffect(() => { if (props.deviceSaveStatus === "success") setOpen(false); }, [props.deviceSaveStatus]);
+    useEffect(() => { if (props.commandSaveStatus === "success") setOpenCommandDialog(false); }, [props.commandSaveStatus]);
+    const canSend = props.selectedDevice?.state && props.selectedDevice.deviceChannelType !== DeviceChannelType.HttpServer;
     const { initData } = props;
     useEffect(() => { initData(); }, [initData]);
     const handleOpen = () => {
@@ -110,7 +112,6 @@ const Home = (props: any) => {
     const handleAddCommand = (name: string, type: CommandType, command: string) => {
         if (name && name.trim() !== "" && command && command.trim() !== "") {
             props.addCommand({name, type, command});
-            setOpenCommandDialog(false);
         } else
             props.enqueueSnackbar(
                 "信息输入存在空值",
@@ -121,42 +122,27 @@ const Home = (props: any) => {
             )
     }
 
-    const showCommand = () => {
-            return <Spring to={{opacity: openCommand ? 1 : 0,width:openCommand ? 300 : 0}}>
-                {
-                    (styles:any) => <AnimatedBox style={styles} sx={{borderLeft: '1px solid rgba(255,255,255,0.12)'}}>
-                        <StyledBox sx={{height: "calc(100% - 55px)", overflow: 'auto'}}>
-                            <Command data={props.commands} open={openCommandDialog}
-                                     sendMessage={send}/>
-                        </StyledBox>
-
-                        <Toolbar variant="dense">
-                            <Typography
-                                component="div"
-                                sx={{flexGrow: 1}}
-                            >
-                            </Typography>
-                            <IconButton size="small" aria-label="add" onClick={() => setOpenCommandDialog(true)}
-                                        color="inherit">
-                                <Add/>
-                            </IconButton>
-                        </Toolbar>
-                        <CommandDialog open={openCommandDialog} handleSubmite={handleAddCommand}
-                                       close={() => setOpenCommandDialog(false)}/>
-                    </AnimatedBox>
-                }
-            </Spring>
-    }
+    const showCommand = () => openCommand && <Paper elevation={8} aria-label="常用命令面板"
+        sx={{position: 'absolute', top: 0, bottom: 0, right: 40, width: 'min(300px, calc(100% - 40px))', zIndex: 1}}>
+        <StyledBox sx={{height: 'calc(100% - 48px)', overflow: 'auto'}}>
+            <Command data={props.commands} sendMessage={send} disabled={!canSend}/>
+        </StyledBox>
+        <Toolbar variant="dense" sx={{justifyContent: 'space-between'}}>
+            <Typography variant="body2">常用命令</Typography>
+            <IconButton size="small" aria-label="添加命令" onClick={() => setOpenCommandDialog(true)} color="inherit"><Add/></IconButton>
+        </Toolbar>
+    </Paper>;
 
     const renderForm = () => {
         if (props.selectedDevice) {
             return <>
-                <Toolbar variant="dense">
+                <Toolbar variant="dense" sx={{px: 1, gap: 1, whiteSpace: "nowrap"}}>
                     <Typography
                         variant='body2'
                         noWrap
                         component="div"
-                        sx={{maxWidth: 100}}
+                        sx={{minWidth: 0, flex: 1}}
+                        title={`${props.selectedDevice.name} (${props.selectedDevice.address})`}
                     >
                         {props.selectedDevice.name}({props.selectedDevice.address})
                     </Typography>
@@ -178,10 +164,10 @@ const Home = (props: any) => {
                         }
                     }}>{props.selectedDevice.state ? "断开连接" : "连接"}</Button>
                 </Toolbar>
-                <StyledCard variant="outlined" sx={{height: "calc(100% - 96px)", width: "100%"}}>
+                <StyledCard variant="outlined" sx={{height: "calc(100% - 96px)", width: "100%", minWidth: 0}}>
                     <CardContent style={{padding: 0}} sx={{height: "100%"}}>
-                        <Box sx={{display: 'flex', height: "100%"}}>
-                            <StyledBox sx={{flexGrow: 1, height: "100%", overflow: "auto"}}>{
+                        <Box sx={{display: 'flex', height: "100%", position: 'relative'}}>
+                            <StyledBox sx={{flexGrow: 1, minWidth: 0, height: "100%", overflow: "auto"}}>{
                                 props.messages.filter((item: any) => item.address === props.selectedDevice.address).map((message: any, index: number) => {
                                     return <Spring key={index} from={{opacity:0,scale:0}}  to={{opacity:1,scale:1}}>
                                         { (styles:any) =>  <AnimatedCard style={styles} sx={{m: 1}} variant="outlined" key={`ListItem-${index}`}>
@@ -193,19 +179,19 @@ const Home = (props: any) => {
                                                 </Box>
                                                 <Paper sx={{p: 1, mt: 1}}>
                                                     <Typography
-                                                        component={"strong"}>{props.selectedDevice.deviceChannelType === DeviceChannelType.HttpServer ? message.message : Array.prototype.map.call(message.message, (x: number) => '0x' + (('00' + x.toString(16)).slice(-2))).join(' ')}</Typography>
+                                                        sx={{overflowWrap: "anywhere", whiteSpace: "pre-wrap"}} component={"strong"}>{props.selectedDevice.deviceChannelType === DeviceChannelType.HttpServer ? message.message : Array.prototype.map.call(message.message, (x: number) => '0x' + (('00' + x.toString(16)).slice(-2))).join(' ')}</Typography>
                                                 </Paper>
                                             </CardContent>
                                             <CardActions disableSpacing>
                                                 <Button onClick={() => props.copyText(message.message)}
-                                                        size="small">复制数组到剪切板</Button>
+                                                        size="small">{props.selectedDevice.deviceChannelType === DeviceChannelType.HttpServer ? "复制文本" : "复制数组到剪切板"}</Button>
                                             </CardActions>
                                         </AnimatedCard>}
                                     </Spring>
                                 })
                             }</StyledBox>
                             <Box sx={{
-                                maxWidth: 350,
+                                flexShrink: 0, width: 40,
                                 display: props.selectedDevice.deviceChannelType === DeviceChannelType.HttpServer ? "none" : "flex"
                             }}>
                                 {
@@ -215,7 +201,7 @@ const Home = (props: any) => {
                                     <List sx={{p: 0}}>
                                         {['常用命令'].map((text, index) => (
                                             <ListItem key={text} sx={{p: 0}}>
-                                                <IconButton aria-label="常用命令" onClick={() => setOpenCommand(!openCommand)}>
+                                                <IconButton aria-label="常用命令" aria-expanded={openCommand} onClick={() => setOpenCommand(!openCommand)}>
                                                     <HomeIcon/>
                                                 </IconButton>
                                             </ListItem>
@@ -227,8 +213,11 @@ const Home = (props: any) => {
                     </CardContent>
                 </StyledCard>
                 <Toolbar variant="dense">
-                    <InputBase
-                        sx={{ml: 1, flex: 1}}
+                    {props.selectedDevice.deviceChannelType === DeviceChannelType.HttpServer
+                        ? <Typography variant="body2" color="text.secondary">{props.selectedDevice.state ? "正在监听 HTTP 请求" : "连接后开始监听 HTTP 请求"}</Typography>
+                        : <><InputBase
+                        sx={{ml: 1, flex: 1, minWidth: 0}}
+                        disabled={!canSend}
                         placeholder="16进制字符串"
                         inputProps={{'aria-label': '16进制字符串'}}
                         value={message}
@@ -243,32 +232,31 @@ const Home = (props: any) => {
                                 send(message)
                         }}
                     />
-                    <IconButton size="small" type="submit" onClick={() => {
+                    <IconButton size="small" disabled={!canSend || !message.trim()} type="submit" onClick={() => {
                         send(message);
                     }
                     } aria-label="发送">
                         <Send/>
-                    </IconButton>
+                    </IconButton></>}
                 </Toolbar>
             </>
         } else {
-            return null;
+            return <Box sx={{p: 3, color: "text.secondary"}}>添加或选择设备，开始通信测试</Box>;
         }
     }
 
     const addDevice = (name: string, address: string, deviceType: DeviceType, deviceChannelType: DeviceChannelType, options: any) => {
-        if (props.devices.find((x: any) => x.address === address)) {
+        if (props.devices.find((x: any) => x.address === address.trim())) {
                 props.enqueueSnackbar('不可添加同地址设备', {variant: 'error'});
         } else {
             if (name && name.trim() !== "" && address && address.trim() !== "") {
                 props.addDevice({
                     deviceType: deviceType,
-                    name: name,
+                    name: name.trim(),
                     deviceChannelType: deviceChannelType,
-                    address: address,
+                    address: address.trim(),
                     option: options
                 });
-                setOpen(false);
             } else
                 props.enqueueSnackbar(
                     "信息输入存在空值",
@@ -282,7 +270,7 @@ const Home = (props: any) => {
 
     return (
         <Box sx={{height: "100%", display: "flex"}}>
-            <Paper sx={{borderRadius: 0, height: "100%", overflow: "hidden", width: 360}}>
+            <Paper sx={{borderRadius: 0, height: "100%", overflow: "hidden", width: "clamp(180px, 28vw, 280px)", flexShrink: 0}}>
                 <Box sx={{height: "calc(100% - 48px)", overflowY: "auto", width: "100%"}}>
                     <Device data={props.devices} selected={props.selectedDevice} handleClick={handleSelect}/>
                 </Box>
@@ -292,22 +280,24 @@ const Home = (props: any) => {
                         sx={{flexGrow: 1}}
                     >
                     </Typography>
-                    <IconButton size="small" aria-label="add" onClick={handleOpen} color="inherit">
+                    <IconButton size="small" aria-label="添加设备" onClick={handleOpen} color="inherit">
                         <Add/>
                     </IconButton>
-                    <IconButton size="small" aria-label="remove" onClick={handleRemove} color="inherit">
+                    <IconButton size="small" aria-label="删除设备" disabled={!props.selectedDevice} onClick={handleRemove} color="inherit">
                         <Remove/>
                     </IconButton>
                 </Toolbar>
             </Paper>
 
-            <Paper sx={{height: "100%", overflow: "hidden", width: "calc(100% - 360px)"}}>
+            <Paper sx={{height: "100%", overflow: "hidden", flex: 1, minWidth: 0}}>
                 {
                     renderForm()
                 }
             </Paper>
-            <DeviceDialog open={open} ports={props.ports} hidPaths={props.hidPaths} handleOpen={() => setOpen(!open)}
+            <DeviceDialog open={open} pending={props.deviceSaveStatus === "pending"} ports={props.ports} hidPaths={props.hidPaths} handleOpen={() => setOpen(!open)}
                           handleSubmite={addDevice}/>
+            <CommandDialog open={openCommandDialog} pending={props.commandSaveStatus === "pending"}
+                handleSubmite={handleAddCommand} close={() => setOpenCommandDialog(false)}/>
         </Box>
     )
 }
@@ -337,7 +327,9 @@ const mapStateToProps = (state: any) => {
         selectedDevice: state.device.selectedDevice,
         ports: state.device.ports,
         hidPaths: state.device.hidPaths,
-        commands: state.device.commands
+        commands: state.device.commands,
+        deviceSaveStatus: state.device.deviceSaveStatus,
+        commandSaveStatus: state.device.commandSaveStatus
     }
 }
 

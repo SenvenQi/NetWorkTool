@@ -8,8 +8,7 @@ import {
     Badge,
     Divider,
     ListItemButton,
-    Box,
-    Typography
+    Box
 } from '@mui/material';
 import Computer from '@mui/icons-material/Computer';
 import IDevice from '../models/device';
@@ -29,7 +28,7 @@ export default function FolderList(props:{data:IDevice[],handleClick:any,selecte
 										</Badge>
 									</Avatar>
 							</ListItemAvatar>
-							<ListItemText primary={item.name} secondary={<Typography noWrap={true}>{item.address}</Typography>} />
+							<ListItemText sx={{minWidth: 0}} primary={item.name} primaryTypographyProps={{noWrap: true}} secondary={item.address} secondaryTypographyProps={{noWrap: true}} title={`${item.name} (${item.address})`} />
 						</ListItemButton>
 					</ListItem>
 					<Divider key={`Divider-${index}`} component="li" />

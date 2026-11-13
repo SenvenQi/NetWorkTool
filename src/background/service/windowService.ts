@@ -21,7 +21,7 @@ export class WindowService implements IWindowService {
     }
     createWindow() {
         this.mainWindow = new BrowserWindow({
-            height: 600, width: 800, frame: false,
+            height: 600, width: 800, minWidth: 800, minHeight: 600, frame: false,
             webPreferences: {
                 webSecurity: true, nodeIntegration: false, contextIsolation: true,
                 preload: path.join(__dirname, "preload.js"),

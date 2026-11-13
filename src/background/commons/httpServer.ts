@@ -16,7 +16,7 @@ export default abstract class HttpServer implements IDisposable {
             if (!res.writableEnded && !res.destroyed) { res.writeHead(status, {"Content-Type": "text/plain; charset=utf-8"}); res.end(text); }
         };
         req.on("error", error => { if (isCurrent()) this.onRequestError(error); finish(400, "Invalid request"); });
-        if (req.headers["content-type"]?.startsWith("multipart/form-data")) {
+        if (req.headers["content-type"]?.split(";", 1)[0].trim().toLowerCase() === "multipart/form-data") {
             const uploads: string[] = [];
             const form = formidable({ maxFileSize: limit, maxTotalFileSize: limit, maxFiles: 10, maxFieldsSize: limit, maxFields: 100 });
             form.on("fileBegin", (_name, file) => uploads.push(file.filepath));

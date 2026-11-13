@@ -76,7 +76,7 @@ const AppBarIconButton = styled(IconButton)({
 
 const ContentBox = styled(Box)({
   overflow: "auto",
-  height: 'calc(100vh - 44px)'
+  height: 'calc(100vh - 48px)'
 })
 export default function MiniDrawer(props: any) {
   const theme = useTheme();
@@ -112,24 +112,24 @@ export default function MiniDrawer(props: any) {
           ))}
         </List>
         <DrawerFooter>
-          <IconButton onClick={handleDrawerClose} aria-label="delete" size="medium">
+          <IconButton onClick={handleDrawerClose} aria-label={open ? "收起导航" : "展开导航"} size="medium">
             {open ? <ArrowBackIosNewIcon fontSize="inherit" /> : <ArrowForwardIosIcon fontSize="inherit" />}
           </IconButton>
         </DrawerFooter>
       </Drawer>
-      <Box component="main" sx={{ flexGrow: 1 }}>
+      <Box component="main" sx={{ flexGrow: 1, minWidth: 0 }}>
         <AppBar position={"relative"}>
           <Toolbar variant="dense">
             <Typography variant="h6" color="inherit" sx={{ flexGrow: 1 }} component="div">
               网络测试工具
             </Typography>
-            <AppBarIconButton onClick={min} aria-label="delete" size="medium">
+            <AppBarIconButton onClick={min} aria-label="最小化" size="medium">
               <MinimizeIcon />
             </AppBarIconButton>
-            <AppBarIconButton onClick={max} aria-label="delete" size="medium">
+            <AppBarIconButton onClick={max} aria-label="切换全屏" size="medium">
               <ZoomOutMapIcon />
             </AppBarIconButton>
-            <AppBarIconButton onClick={exist} aria-label="delete" size="medium">
+            <AppBarIconButton onClick={exist} aria-label="关闭窗口" size="medium">
               <CloseIcon />
             </AppBarIconButton>
           </Toolbar>
