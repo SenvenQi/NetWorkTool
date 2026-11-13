@@ -13,11 +13,9 @@ export class LoadDataRequest implements IRequset{
 export class LoadDataRequestHandler implements IRequsetHandler<LoadDataRequest>{
     constructor(@IDeviceContext private deviceRepo:IDeviceContext,@IMainWindowService private windowService:IWindowService) {
     }
-    handle(command: LoadDataRequest): void {
-        this.deviceRepo.getAllDevice().then((devices)=>{
+    handle(command: LoadDataRequest): Promise<void> {
+        return this.deviceRepo.getAllDevice().then((devices)=>{
             this.windowService.sendMessage({type:"CALL_BACK_INIT_DATA",data:devices})
-        }).catch((error)=>{
-            console.log(error)
         })
     }
 }

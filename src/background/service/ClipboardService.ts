@@ -7,11 +7,12 @@ export class ClipboardService {
     constructor() {
     }
 
-    copy(text:Buffer):void{
-        clipboard.writeText(`{${Array.prototype.map.call(text, (x:number) => '0x' + (('00' + x.toString(16)).slice(-2))).join(',')}}`)
+    async copy(text:Buffer | string):Promise<void>{
+        if (typeof text === "string") { await clipboard.writeText(text); return; }
+        await clipboard.writeText(`{${Array.prototype.map.call(text, (x:number) => '0x' + (('00' + x.toString(16)).slice(-2))).join(',')}}`)
     }
 
-    read(text:string):string{
+    async read():Promise<string>{
         return  clipboard.readText();
     }
 }

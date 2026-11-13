@@ -3,6 +3,7 @@ import {MessageType} from "../../models/messageType";
 
 const initialState = {
     error: false,
+    requestError: null,
     devices: [],
     messages: [],
     selectedMessages: [],
@@ -15,6 +16,8 @@ const initialState = {
 function reducer(state: any = initialState, action: any) {
 
     switch (action.type) {
+        case "REQUEST_FAILED":
+            return {...state, requestError: action.data};
         case actionTypes.CALL_BACK_ADD_COMMAND:
             return {
                 ...state,
@@ -56,20 +59,21 @@ function reducer(state: any = initialState, action: any) {
                 case MessageType.Info:
                     return {
                         ...state,
-                        messages: [...state.messages,action.data.message]
+                        messages: [...state.messages,action.data.message].slice(-1000)
                     }
-                case MessageType.ChangeState || MessageType.Error:
+                case MessageType.ChangeState:
+                case MessageType.Error:
                     const tempDevices = state.devices.map((device: any) => {
                         if (device.address === action.data.message.address) {
                             return {...device, state: action.data.message.success}
                         }
                         return device;
                     });
-                    const tempSelectedDevice = tempDevices.find((item: any) => item.address == action.data.message.address);
+                    const tempSelectedDevice = tempDevices.find((item: any) => item.address === state.selectedDevice?.address);
                     return {
                         ...state,
                         devices: tempDevices,
-                        selectedDevice: tempSelectedDevice
+                        selectedDevice: tempSelectedDevice ?? null
                     }
                 default:
                     return state;
@@ -85,18 +89,13 @@ function reducer(state: any = initialState, action: any) {
             }
             return {
                 ...state,
-                devices: [...state.devices.map((item: any) => {
-                    item.selected = false
-                    return item
-                }), device],
+                devices: [...state.devices.map((item: any) => ({...item, selected: false})), device],
                 selectedDevice: device
             };
         case actionTypes.CALL_BACK_REMOVE_DEVICE:
             if (action.data) {
-                let selectDevice = null;
-                if (state.devices.length > 0) {
-                    selectDevice = state.devices[0];
-                }
+                const remaining = state.devices.filter((item: any) => item.address !== action.data);
+                const selectDevice = remaining.find((item: any) => item.address === state.selectedDevice?.address) ?? remaining[0] ?? null;
                 return {
                     ...state,
                     devices: state.devices.filter((item: any) => {
@@ -110,11 +109,8 @@ function reducer(state: any = initialState, action: any) {
         case actionTypes.SELECT_DEVICE:
             return {
                 ...state,
-                devices: state.devices.map((item: any) => {
-                    item.selected = item.address == action.data.address;
-                    return item
-                }),
-                selectedDevice: state.devices.find((item: any) => item.address == action.data.address)
+                devices: state.devices.map((item: any) => ({...item, selected: item.address === action.data.address})),
+                selectedDevice: state.devices.find((item: any) => item.address === action.data.address)
             };
         case actionTypes.SET_PORTS:
             return {

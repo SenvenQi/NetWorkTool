@@ -79,9 +79,8 @@ const Home = (props: any) => {
     const [openCommand, setOpenCommand] = useState(false);
     const [openCommandDialog, setOpenCommandDialog] = useState(false);
 
-    useEffect(() => {
-        props.initData();
-    }, [])
+    const { initData } = props;
+    useEffect(() => { initData(); }, [initData]);
     const handleOpen = () => {
         if (!open) {
             props.getPorts();
@@ -89,6 +88,14 @@ const Home = (props: any) => {
         }
         setOpen(!open)
     }
+
+    const send = (value: any) => {
+        if (!props.selectedDevice?.state || props.selectedDevice.deviceChannelType === DeviceChannelType.HttpServer) {
+            props.enqueueSnackbar("请先连接可发送数据的设备", {variant: "error"});
+            return;
+        }
+        props.sendMessage({address: props.selectedDevice.address, message: value});
+    };
 
     const handleSelect = (device: any) => {
         props.selectDevice(device)
@@ -101,9 +108,10 @@ const Home = (props: any) => {
     }
 
     const handleAddCommand = (name: string, type: CommandType, command: string) => {
-        if (name && name.trim() !== "" && command && command.trim() !== "")
-            props.addCommand({name, type, command})
-        else
+        if (name && name.trim() !== "" && command && command.trim() !== "") {
+            props.addCommand({name, type, command});
+            setOpenCommandDialog(false);
+        } else
             props.enqueueSnackbar(
                 "信息输入存在空值",
                 {
@@ -119,10 +127,7 @@ const Home = (props: any) => {
                     (styles:any) => <AnimatedBox style={styles} sx={{borderLeft: '1px solid rgba(255,255,255,0.12)'}}>
                         <StyledBox sx={{height: "calc(100% - 55px)", overflow: 'auto'}}>
                             <Command data={props.commands} open={openCommandDialog}
-                                     sendMessage={(message: any) => props.sendMessage({
-                                         address: props.selectedDevice.address,
-                                         message
-                                     })}/>
+                                     sendMessage={send}/>
                         </StyledBox>
 
                         <Toolbar variant="dense">
@@ -134,10 +139,6 @@ const Home = (props: any) => {
                             <IconButton size="small" aria-label="add" onClick={() => setOpenCommandDialog(true)}
                                         color="inherit">
                                 <Add/>
-                            </IconButton>
-                            <IconButton size="small" aria-label="remove" onClick={() => {
-                            }} color="inherit">
-                                <Remove/>
                             </IconButton>
                         </Toolbar>
                         <CommandDialog open={openCommandDialog} handleSubmite={handleAddCommand}
@@ -181,18 +182,18 @@ const Home = (props: any) => {
                     <CardContent style={{padding: 0}} sx={{height: "100%"}}>
                         <Box sx={{display: 'flex', height: "100%"}}>
                             <StyledBox sx={{flexGrow: 1, height: "100%", overflow: "auto"}}>{
-                                props.messages.filter((item: any) => item.address == props.selectedDevice.address).map((message: any, index: number) => {
+                                props.messages.filter((item: any) => item.address === props.selectedDevice.address).map((message: any, index: number) => {
                                     return <Spring key={index} from={{opacity:0,scale:0}}  to={{opacity:1,scale:1}}>
                                         { (styles:any) =>  <AnimatedCard style={styles} sx={{m: 1}} variant="outlined" key={`ListItem-${index}`}>
                                             <CardContent>
                                                 <Box>
                                                     <Chip size={"small"}
-                                                          label={moment(message.time).format('YYYY-MM-DD hh:mm:ss')}
+                                                          label={moment(message.time).format('YYYY-MM-DD HH:mm:ss')}
                                                           component={"div"} color="success"/>
                                                 </Box>
                                                 <Paper sx={{p: 1, mt: 1}}>
                                                     <Typography
-                                                        component={"strong"}>{props.selectedDevice.deviceChannelType == DeviceChannelType.HttpServer ? message.message : Array.prototype.map.call(message.message, (x: number) => '0x' + (('00' + x.toString(16)).slice(-2))).join(' ')}</Typography>
+                                                        component={"strong"}>{props.selectedDevice.deviceChannelType === DeviceChannelType.HttpServer ? message.message : Array.prototype.map.call(message.message, (x: number) => '0x' + (('00' + x.toString(16)).slice(-2))).join(' ')}</Typography>
                                                 </Paper>
                                             </CardContent>
                                             <CardActions disableSpacing>
@@ -212,9 +213,9 @@ const Home = (props: any) => {
                                 }
                                 <Box sx={{borderLeft: '1px solid', borderColor: 'rgba(255,255,255,0.12)'}}>
                                     <List sx={{p: 0}}>
-                                        {['Inbox', 'Starred', 'Send email', 'Drafts'].map((text, index) => (
+                                        {['常用命令'].map((text, index) => (
                                             <ListItem key={text} sx={{p: 0}}>
-                                                <IconButton onClick={() => setOpenCommand(!openCommand)}>
+                                                <IconButton aria-label="常用命令" onClick={() => setOpenCommand(!openCommand)}>
                                                     <HomeIcon/>
                                                 </IconButton>
                                             </ListItem>
@@ -232,18 +233,18 @@ const Home = (props: any) => {
                         inputProps={{'aria-label': '16进制字符串'}}
                         value={message}
                         onChange={(event) => {
-                            const regex = /^[0-9a-fA-F]+$/;
+                            const regex = /^[0-9a-fA-F\s]+$/;
                             if (event.target.value === '' || regex.test(event.target.value)) {
                                 setMessage(event.target.value);
                             }
                         }}
                         onKeyDown={(event) => {
-                            if (event.key == 'Enter')
-                                props.sendMessage({address: props.selectedDevice.address, message})
+                            if (event.key === 'Enter')
+                                send(message)
                         }}
                     />
                     <IconButton size="small" type="submit" onClick={() => {
-                        props.sendMessage({address: props.selectedDevice.address, message});
+                        send(message);
                     }
                     } aria-label="发送">
                         <Send/>
@@ -256,7 +257,7 @@ const Home = (props: any) => {
     }
 
     const addDevice = (name: string, address: string, deviceType: DeviceType, deviceChannelType: DeviceChannelType, options: any) => {
-        if (props.devices.find((x: any) => x.address == address)) {
+        if (props.devices.find((x: any) => x.address === address)) {
                 props.enqueueSnackbar('不可添加同地址设备', {variant: 'error'});
         } else {
             if (name && name.trim() !== "" && address && address.trim() !== "") {

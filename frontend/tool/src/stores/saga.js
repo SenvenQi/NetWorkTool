@@ -1,4 +1,4 @@
-import {all, takeEvery} from 'redux-saga/effects'
+import {all, takeEvery, call, put} from 'redux-saga/effects'
 
 function* connectDeviceAsync(action) {
     yield window.api.send('device/connectDevice', {
@@ -55,18 +55,26 @@ function* addCommandAsyc(action) {
     yield window.api.send('device/addCommand',action.data);
 }
 
+function* safely(worker, action) {
+    try {
+        yield call(worker, action);
+    } catch (error) {
+        yield put({type: "REQUEST_FAILED", data: {message: error.message || String(error)}});
+    }
+}
+
 function* rootSaga() {
     yield all([
-        yield takeEvery("GET_HID_DEVICE", getHidDeviceAsync),
-        yield takeEvery("CONNECT_DEVICE", connectDeviceAsync),
-        yield takeEvery("SEND_MESSAGE", sendMessageAsync),
-        yield takeEvery("REMOVE_DEVICE", removeDeviceAsync),
-        yield takeEvery("GET_PORTS", getPortsAsync),
-        yield takeEvery("DIS_CONECT_DEVICE", disConnectDeviceAsync),
-        yield takeEvery("ADD_DEVICE", addDeviceAsync),
-        yield takeEvery("INIT_DATA", initDataAsync),
-        yield takeEvery("COPY_TEXT", copyText),
-        yield takeEvery("ADD_COMMAND", addCommandAsyc)
+        takeEvery("GET_HID_DEVICE", safely, getHidDeviceAsync),
+        takeEvery("CONNECT_DEVICE", safely, connectDeviceAsync),
+        takeEvery("SEND_MESSAGE", safely, sendMessageAsync),
+        takeEvery("REMOVE_DEVICE", safely, removeDeviceAsync),
+        takeEvery("GET_PORTS", safely, getPortsAsync),
+        takeEvery("DIS_CONECT_DEVICE", safely, disConnectDeviceAsync),
+        takeEvery("ADD_DEVICE", safely, addDeviceAsync),
+        takeEvery("INIT_DATA", safely, initDataAsync),
+        takeEvery("COPY_TEXT", safely, copyText),
+        takeEvery("ADD_COMMAND", safely, addCommandAsyc)
     ])
 }
 

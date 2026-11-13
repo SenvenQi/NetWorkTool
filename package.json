@@ -5,13 +5,18 @@
   "main": "./dist/main.js",
   "private": true,
   "scripts": {
-    "initPackage": "yarn --unsafe-perm --build-from-source && npm --prefix ./frontend/tool install",
-    "dev": "concurrently \"cross-env BROWSER=none npm --prefix ./frontend/tool run start\" \"wait-on http://localhost:3000 && npm run start\"",
-    "build": "tsc --sourceRoot ./src/background && npm --prefix ./frontend/tool run build",
+    "initPackage": "npm ci && npm --prefix frontend/tool ci",
+    "dev": "concurrently \"cross-env BROWSER=none npm --prefix frontend/tool start\" \"wait-on http://localhost:3000 && cross-env NODE_ENV=development npm start\"",
+    "build": "npm run build:main && npm --prefix frontend/tool run build",
     "watch": "tsc -w",
-    "lint": "eslint -c .eslintrc --ext .ts ./src",
+    "lint": "eslint --ext .ts src",
     "start": "tsc --sourceRoot ./src/background && electron ./dist/main.js",
-    "pack": "npm run build && electron-builder --windows nsis:ia32"
+    "pack": "npm run build && electron-builder --win nsis --x64 --publish never",
+    "build:main": "tsc",
+    "test": "npm run build:main && node --test tests/*.test.cjs",
+    "postinstall": "electron-rebuild --only better-sqlite3",
+    "test:electron": "electron tests/electron-smoke.cjs",
+    "test:packaged": "node tests/packaged-smoke.cjs"
   },
   "keywords": [
     "Electron",
@@ -22,31 +27,27 @@
   "author": "SevenQi",
   "license": "private",
   "devDependencies": {
-    "@types/formidable": "^2.0.5",
-    "@types/serialport": "^8.0.2",
-    "@types/sqlite3": "^3.1.8",
+    "@types/formidable": "^3.4.6",
+    "@types/node": "^16.18.0",
     "@typescript-eslint/eslint-plugin": "^4.33.0",
     "@typescript-eslint/parser": "^4.33.0",
     "concurrently": "^6.4.0",
     "cross-env": "^7.0.3",
-    "electron": "^15.3.3",
-    "electron-builder": "^22.11.7",
-    "electron-rebuild": "^3.2.3",
+    "electron": "^43.8.10",
+    "electron-builder": "^26.18.0",
     "eslint": "^7.32.0",
-    "typescript": "^4.4.3",
-    "wait-on": "^6.0.0"
+    "typescript": "~4.9.5",
+    "wait-on": "^9.5.1",
+    "@electron/rebuild": "^4.2.1"
   },
   "dependencies": {
-    "@microsoft/signalr": "^6.0.8",
-    "@microsoft/signalr-protocol-msgpack": "^6.0.8",
-    "@types/node-hid": "^1.3.1",
-    "formidable": "^2.0.1",
+    "better-sqlite3": "^12.11.1",
+    "formidable": "^3.5.4",
     "iconv-lite": "^0.6.3",
-    "node-hid": "^2.1.1",
+    "node-hid": "^3.3.0",
     "reflect-metadata": "^0.1.13",
-    "serialport": "^9.2.8",
-    "sqlite3": "^5.0.11",
-    "typeorm": "^0.3.9"
+    "serialport": "^13.0.0",
+    "typeorm": "^0.3.28"
   },
   "build": {
     "appId": "Tool",
@@ -55,12 +56,6 @@
     "directories": {
       "output": "build"
     },
-    "publish": [
-      {
-        "provider": "generic",
-        "url": "http://41.236.100.207:8877/"
-      }
-    ],
     "files": [
       "dist/**/*",
       "node_modules/**/*",
@@ -74,26 +69,20 @@
       }
     ],
     "win": {
-      "icon": "public/favicon.ico"
+      "icon": "frontend/tool/public/logo512.png"
     },
-    "extends": null
+    "extends": null,
+    "beforePack": "./scripts/rebuild.cjs",
+    "npmRebuild": false
   },
-  "eslintConfig": {
-    "extends": [
-      "react-app",
-      "react-app/jest"
-    ]
+  "overrides": {
+    "typeorm": {
+      "glob": "^14.0.6"
+    },
+    "minimatch@>=7": "^11.0.8",
+    "brace-expansion@1": "^1.1.22"
   },
-  "browserslist": {
-    "production": [
-      ">0.2%",
-      "not dead",
-      "not op_mini all"
-    ],
-    "development": [
-      "last 1 chrome version",
-      "last 1 firefox version",
-      "last 1 safari version"
-    ]
+  "engines": {
+    "node": ">=22.12.0"
   }
 }

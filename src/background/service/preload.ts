@@ -1,17 +1,10 @@
-import {
-    contextBridge,
-    ipcRenderer
-} from 'electron';
-
-// Expose protected methods that allow the renderer process to use
-// the ipcRenderer without exposing the entire object
-contextBridge.exposeInMainWorld(
-    "api", {
-        send: (path:string, data:any):Promise<any> => {
-           return ipcRenderer.invoke("device", path, data);
-        },
-        receive: (channel:string, func:(params:any[]) =>void) => {
-            ipcRenderer.on(channel, (event, args:any[]) => func(args));
-        }
+import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron';
+contextBridge.exposeInMainWorld("api", {
+    send: (path: string, data: any): Promise<any> => ipcRenderer.invoke("device", path, data),
+    receive: (channel: string, func: (params: any) => void) => {
+        if (channel !== "PackageMessage") throw new Error("Unsupported event channel");
+        const listener = (_event: IpcRendererEvent, data: any) => func(data);
+        ipcRenderer.on(channel, listener);
+        return () => ipcRenderer.removeListener(channel, listener);
     }
-);
+});

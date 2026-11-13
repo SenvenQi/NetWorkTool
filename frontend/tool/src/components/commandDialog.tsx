@@ -9,10 +9,6 @@ class CommandDialog extends Component<any> {
         command: ''
     }
 
-    constructor(context: any) {
-        super(context);
-    }
-
     render() {
         return (
             <Dialog open={this.props.open} onClose={this.props.close}>
@@ -27,12 +23,12 @@ class CommandDialog extends Component<any> {
                     <TextField fullWidth sx={{p: 1}}
                                select
                                value={this.state.type}
-                               onChange={(event) => this.setState({type:event.target.value}) }
+                               onChange={(event) => this.setState({type:Number(event.target.value)}) }
                                variant="standard"
                                SelectProps={{
                                    native: true
                                }}>
-                        {[{name: "2进制字符串", value: CommandType.Buffer},{name: "纯字符串", value: CommandType.String}].map((option) => (
+                        {[{name: "16进制字符串", value: CommandType.Buffer},{name: "纯字符串", value: CommandType.String}].map((option) => (
                             <option key={option.value} value={option.value}>
                                 {option.name}
                             </option>

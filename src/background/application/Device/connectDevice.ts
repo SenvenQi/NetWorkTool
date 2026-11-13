@@ -1,6 +1,6 @@
-import { IRequsetHandler } from "../../commons/Mediator/irequestHandler";
+import { IRequsetHandler } from "../../commons/Mediator/IRequestHandler";
 import { createDecorator, ServiceIdentifier } from "../../commons/dependencyInjection/instantiation";
-import { IRequset } from "../../commons/Mediator/irequest";
+import { IRequset } from "../../commons/Mediator/IRequest";
 import { IDeviceManager } from "../../domains/ideviceManager";
 import {IDeviceContext} from "../../domains/ideviceContext";
 
@@ -18,8 +18,8 @@ export class ConnectDeviceRequestHandler implements IRequsetHandler<ConnectDevic
     constructor(@IDeviceContext private deviceRepo:IDeviceContext,
         @IDeviceManager private deviceManager: IDeviceManager) {
     }
-    handle(command: ConnectDeviceRequest): void {
-        this.deviceRepo.getDevice(command.deivce.address).then((device) => {
+    handle(command: ConnectDeviceRequest): Promise<void> {
+        return this.deviceRepo.getDevice(command.deivce.address).then((device) => {
             if (!device) return
             this.deviceManager.addDeviceClient({
                 deviceType: device.type,
@@ -27,8 +27,6 @@ export class ConnectDeviceRequestHandler implements IRequsetHandler<ConnectDevic
                 address:device.address,
                 options:device.option != ""? JSON.parse(device.option):""
             })
-        }).catch((error)=>{
-            console.log(error)
         })
     }
 }

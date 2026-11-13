@@ -48,7 +48,7 @@ export default class HidDeviceClient extends HidClient implements IDevice {
                 this.filter = new VoiceFilter();
                 break;
             default:
-                this.filter = null;
+                this.filter = new BaseFilter();
                 break;
         }
     }

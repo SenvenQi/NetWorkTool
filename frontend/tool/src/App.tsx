@@ -12,14 +12,21 @@ import {withSnackbar} from "notistack";
 import {MessageType} from "./models/messageType";
 import {actionTypes} from "./stores/device/actions";
 class MyApp extends React.Component<any> {
+    private unsubscribe?: () => void;
+    componentDidUpdate(previous: any) {
+        if (this.props.requestError && this.props.requestError !== previous.requestError) {
+            this.props.enqueueSnackbar(this.props.requestError.message, {variant: "error"});
+        }
+    }
+    componentWillUnmount() { this.unsubscribe?.(); }
     componentDidMount(){
-        window.api.receive("PackageMessage",(data:any)=> {
+        this.unsubscribe = window.api.receive("PackageMessage",(data:any)=> {
             if(data.type === actionTypes.RECIVE_MESSAGE && data.data.message?.info)
                 this.props.enqueueSnackbar(
                     data.data.message.info,
                     {
                         key: new Date().getTime() + Math.random(),
-                        variant:data.data.messageType == MessageType.Error? 'error': 'success',
+                        variant:data.data.messageType === MessageType.Error? 'error': 'success',
                     }
                 )
             this.props.callAction(data);
@@ -47,6 +54,7 @@ const mapDispatchToProps = (dispatch:any) => {
 const mapStateToProps = (state:any) => {
     return {
         pages: state.router.pages,
+        requestError: state.device.requestError,
     }
   }
 

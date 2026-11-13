@@ -1,0 +1,28 @@
+{
+  "root": true,
+  "parser": "@typescript-eslint/parser",
+  "plugins": [
+    "@typescript-eslint"
+  ],
+  "env": {
+    "node": true,
+    "es2020": true
+  },
+  "extends": [
+    "eslint:recommended"
+  ],
+  "rules": {
+    "no-unused-vars": "off",
+    "no-undef": "off",
+    "no-empty": "off",
+    "no-prototype-builtins": "off",
+    "no-redeclare": "off",
+    "@typescript-eslint/no-redeclare": "off",
+    "no-constant-condition": [
+      "error",
+      {
+        "checkLoops": false
+      }
+    ]
+  }
+}

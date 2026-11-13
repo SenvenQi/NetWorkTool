@@ -29,7 +29,7 @@ export abstract class HidClient implements IDisposable{
     }
 
     dispose(): void {
-        this.hidClient.close()
+        this.hidClient?.close()
         delete this.hidClient;
     }
 

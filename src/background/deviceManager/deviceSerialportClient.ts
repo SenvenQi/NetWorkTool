@@ -45,7 +45,7 @@ export default class DeviceSerialportClient extends SerialportClient implements 
                 this.filter = new VoiceFilter();
                 break;
             default:
-                this.filter = null;
+                this.filter = new BaseFilter();
                 break;
         }
 

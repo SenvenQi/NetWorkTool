@@ -45,7 +45,7 @@ export default class DeviceHttpServer extends HttpServer implements IDevice {
                 this.filter = new VoiceFilter();
                 break;
             default:
-                this.filter = null;
+                this.filter = new HttpFilter();
                 break;
         }
     }

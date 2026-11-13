@@ -1,6 +1,6 @@
-import { IRequsetHandler } from "../../commons/Mediator/irequestHandler";
+import { IRequsetHandler } from "../../commons/Mediator/IRequestHandler";
 import { createDecorator, ServiceIdentifier } from "../../commons/dependencyInjection/instantiation";
-import { IRequset } from "../../commons/Mediator/irequest";
+import { IRequset } from "../../commons/Mediator/IRequest";
 import { IDeviceManager } from "../../domains/ideviceManager";
 import {IDeviceContext} from "../../domains/ideviceContext";
 
@@ -18,12 +18,10 @@ export class CloseDeviceRequestHandler implements IRequsetHandler<CloseDeviceReq
     constructor(@IDeviceContext private deviceRepo:IDeviceContext ,
         @IDeviceManager private deviceManager: IDeviceManager) {
     }
-    handle(command: CloseDeviceRequest): void {
-        this.deviceRepo.getDevice(command.address).then((device) => {
+    handle(command: CloseDeviceRequest): Promise<void> {
+        return this.deviceRepo.getDevice(command.address).then((device) => {
             if (!device) return
             this.deviceManager.removeDeviceClient(command.address)
-        }).catch((error)=>{
-            console.log(error)
         })
     }
 }

@@ -1,6 +1,6 @@
-import { IRequsetHandler } from "../../commons/Mediator/irequestHandler";
+import { IRequsetHandler } from "../../commons/Mediator/IRequestHandler";
 import {createDecorator, ServiceIdentifier} from "../../commons/dependencyInjection/instantiation";
-import { IRequset } from "../../commons/Mediator/irequest";
+import { IRequset } from "../../commons/Mediator/IRequest";
 import {IMainWindowService, IWindowService} from "../../service/windowService";
 import {IDeviceManager} from "../../domains/ideviceManager";
 import {IDeviceContext} from "../../domains/ideviceContext";
@@ -20,12 +20,10 @@ export class RemoveDeviceRequestHandler implements IRequsetHandler<RemoveDeviceR
                 @IMainWindowService private  windowService:IWindowService,
                 @IDeviceManager private deviceManager: IDeviceManager) {
     }
-    handle(command: RemoveDeviceRequest): void {
-        this.deviceRepo.removeDevice(command.address).then(()=>{
+    handle(command: RemoveDeviceRequest): Promise<void> {
+        return this.deviceRepo.removeDevice(command.address).then(()=>{
                 this.deviceManager.removeDeviceClient(command.address)
                 this.windowService.sendMessage({type:"CALL_BACK_REMOVE_DEVICE",data:command.address})
-        }).catch((error)=>{
-            console.log(error)
         })
     }
 }

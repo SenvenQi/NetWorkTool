@@ -42,21 +42,29 @@ export default class DeviceManager implements IDeviceManager {
                     deviceClient = new UdpDeviceClient(deviceOptions,this.sendMessage.bind(this),this.removeDeviceClient.bind(this))
                     break;
             }
-            deviceClient.connect();
+            if (!deviceClient) throw new Error("不支持的设备通道");
             this.deviceClients.push(deviceClient);
+            try { deviceClient.connect(); } catch (error) {
+                this.removeDeviceClient(deviceOptions.address);
+                throw error;
+            }
         } else if (device.state === false) {
-            (device as any).connect();
+            this.removeDeviceClient(device.address);
+            this.addDeviceClient(deviceOptions);
         }
     }
 
     sendMessageByAddress(address: string, command: Buffer) {
         const deviceClient = this.deviceClients.find(item => item.address === address);
-        return deviceClient?.sendMessage(command)
+        if (!deviceClient || !deviceClient.state) throw new Error("设备未连接");
+        if (deviceClient.sendMessage(command) === false) throw new Error("此设备不支持发送");
     }
 
     removeDeviceClient(address: string): void {
         const deviceClient = this.deviceClients.find(item => item.address === address);
         if (deviceClient) {
+            this.deviceClients = this.deviceClients.filter(item => item !== deviceClient);
+            deviceClient.state = false;
             deviceClient.dispose();
             this.windowService.sendMessage({type:"RECIVE_MESSAGE",data:{ messageType: MessageType.ChangeState, message: { success: false, address: address, info: "连接已断开" } }})
             this.deviceClients = this.deviceClients.filter(item => item.address !== address);

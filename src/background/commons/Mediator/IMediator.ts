@@ -1,12 +1,12 @@
 import { IDeviceManager } from "../../domains/ideviceManager";
 import {createDecorator, ServicesAccessor} from "../dependencyInjection/instantiation";
-import { IRequset } from "./irequest";
+import { IRequset } from "./IRequest";
 
 export const IMediator = createDecorator<IMediator>("mediator")
 
 
 export interface IMediator{
-   send(request:IRequset):void
+   send(request:IRequset):void | Promise<void>
 }
 
 export class Mediator implements IMediator{
@@ -16,9 +16,9 @@ export class Mediator implements IMediator{
         this.accessor=_accessor
     }
 
-    send(request: IRequset): void {
+    send(request: IRequset): void | Promise<void> {
         const result = this.accessor.get(request.serviceKey);
-        result.handle(request)
+        return result.handle(request)
     }
 
  }

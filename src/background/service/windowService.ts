@@ -1,64 +1,39 @@
-import { BrowserWindow } from "electron";
+import { app, BrowserWindow } from "electron";
 import path from "path";
 import { createDecorator } from "../commons/dependencyInjection/instantiation";
-import config from "./config.json"
-export interface ResultMessage{
-    type:string;
-    data:any
-}
-
-export const IMainWindowService = createDecorator<IWindowService>("windowService")
-
-export interface IWindowService{
+export interface ResultMessage { type: string; data: any; }
+export const IMainWindowService = createDecorator<IWindowService>("windowService");
+export interface IWindowService {
     mainWindow: BrowserWindow;
-    min():void;
-    max():void;
-    sendMessage(data:ResultMessage):void;
-    createWindow():void;
+    min(): void;
+    max(): void;
+    sendMessage(data: ResultMessage): void;
+    createWindow(): void;
 }
-
-export class WindowService implements IWindowService{
-    mainWindow: BrowserWindow
-
-    min() {
-        this.mainWindow.minimize();
+export class WindowService implements IWindowService {
+    mainWindow: BrowserWindow;
+    min() { this.mainWindow?.minimize(); }
+    max() { this.mainWindow?.setFullScreen(!this.mainWindow.isFullScreen()); }
+    sendMessage(data: ResultMessage) {
+        if (this.mainWindow && !this.mainWindow.isDestroyed()) {
+            this.mainWindow.webContents.send("PackageMessage", data);
+        }
     }
-    max() {
-        if (this.mainWindow.isFullScreen())
-            this.mainWindow.setFullScreen(false);
-        else
-            this.mainWindow.setFullScreen(true);
-    }
-
-    sendMessage(data:ResultMessage){
-        this.mainWindow.webContents.send("PackageMessage", data);
-    }
-
     createWindow() {
         this.mainWindow = new BrowserWindow({
-            height: 600,
+            height: 600, width: 800, frame: false,
             webPreferences: {
-                webSecurity: false,
-                nodeIntegration: true,
+                webSecurity: true, nodeIntegration: false, contextIsolation: true,
                 preload: path.join(__dirname, "preload.js"),
             },
-            frame:false,
-            // fullscreen:true,
-            // transparent:true,
-            // alwaysOnTop:true,
-            // opacity:.5,
-            // backgroundColor:'#ff00ff',
-            width: 800,
         });
-        // this.mainWindow.setIgnoreMouseEvents(true);
-        // and load the index.html of the app.
-        if (config.isDev !== "development"){
-            this.mainWindow.loadURL(`file://${path.join(__dirname, "./out/index.html")}`);
-        }
-        else{
-            this.mainWindow.loadURL("http://localhost:3000/")
-            this.mainWindow.webContents.openDevTools();
-        }
+        this.mainWindow.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
+        this.mainWindow.webContents.on("will-navigate", event => event.preventDefault());
+        const loading = !app.isPackaged && process.env.NODE_ENV === "development"
+            ? this.mainWindow.loadURL("http://localhost:3000/")
+            : this.mainWindow.loadFile(app.isPackaged
+                ? path.join(__dirname, "out/index.html")
+                : path.join(__dirname, "../../frontend/tool/build/index.html"));
+        loading.catch(error => console.error("Failed to load application", error));
     }
-
 }

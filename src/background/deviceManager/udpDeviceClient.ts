@@ -13,7 +13,7 @@ export default class UdpDeviceClient extends UdpClient implements IDevice {
     private readonly pushAction: (data: any) => void;
 
     constructor(deviceOption:IDeviceOption, pushAction: (data: any) => void,removeDeviceClient:(address: string) => void) {
-        super(deviceOption.address);
+        super(deviceOption.address, deviceOption.options || {});
         this.address = deviceOption.address;
         this.pushAction = pushAction;
         this.createFilter(deviceOption.deviceType);
@@ -31,8 +31,10 @@ export default class UdpDeviceClient extends UdpClient implements IDevice {
         this.pushAction({type:"RECIVE_MESSAGE",data:{messageType:MessageType.Info,message:{time:Date.now(),address:this.address,...recivePackage}}});
     }
 
-    sendMessage(command: Uint8Array): void {
+    sendMessage(command: Uint8Array): boolean {
+        if (!this.state) return false;
         this.send(command);
+        return true;
     }
 
     createFilter(deviceType: DeviceType) {
@@ -41,11 +43,11 @@ export default class UdpDeviceClient extends UdpClient implements IDevice {
                 this.filter = new BaseFilter();
                 break;
             default:
-                this.filter = null;
+                this.filter = new BaseFilter();
                 break;
         }
     }
-    state: boolean;
+    state: boolean = false;
 
     onOpen(): void {
         this.udpClient.setBroadcast(true)

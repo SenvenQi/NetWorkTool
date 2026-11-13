@@ -54,7 +54,7 @@ export default class DeviceSerialportClient extends socketClient implements IDev
                 this.filter = new VoiceFilter();
                 break;
             default:
-                this.filter = null;
+                this.filter = new BaseFilter();
                 break;
         }
     }

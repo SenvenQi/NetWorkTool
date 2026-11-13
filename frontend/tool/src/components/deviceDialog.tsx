@@ -16,7 +16,7 @@ export default function FormDialog(props:any) {
   const [deviceType] = React.useState(DeviceType.base);
   const [deviceChannelType, setDeviceChannelType] = React.useState(DeviceChannelType.Socket);
   const renderOption = () => {
-     if (deviceChannelType == DeviceChannelType.Serialport){
+     if (deviceChannelType === DeviceChannelType.Serialport){
              return <TextField fullWidth sx={{p:1}}
                                select
                     value={options.baudRate}
@@ -36,12 +36,22 @@ export default function FormDialog(props:any) {
                  }
                 </TextField>
      }
+     if (deviceChannelType === DeviceChannelType.UdpDevice) {
+         return <>
+             <TextField fullWidth sx={{p:1}} label="目标地址" value={options.remoteAddress || "255.255.255.255"}
+                 onChange={event => setOptions({...options, remoteAddress: event.target.value})} />
+             <TextField fullWidth sx={{p:1}} label="目标端口" type="number" value={options.remotePort ?? 1500}
+                 onChange={event => setOptions({...options, remotePort: Number(event.target.value)})} />
+         </>;
+     }
      return null;
   }
 
   const changeDeviceChannelType = (channelType:DeviceChannelType)=>{
       setDeviceChannelType(channelType);
-      if (channelType == DeviceChannelType.Serialport){
+      setAddress("");
+      setOptions(channelType === DeviceChannelType.UdpDevice ? {remoteAddress: "255.255.255.255", remotePort: 1500} : {});
+      if (channelType === DeviceChannelType.Serialport){
         setOptions({
             baudRate:9600,
             stopBits: 1,
@@ -51,7 +61,7 @@ export default function FormDialog(props:any) {
       }
   }
   const renderAddress = () => {
-		if (deviceChannelType == DeviceChannelType.Serialport) {
+		if (deviceChannelType === DeviceChannelType.Serialport) {
 			return <TextField fullWidth sx={{p:1}}
 					select
 					variant="standard"
@@ -69,7 +79,7 @@ export default function FormDialog(props:any) {
 						</option>
 					))}
 				</TextField>
-		}else if(deviceChannelType == DeviceChannelType.HidDevice){
+		}else if(deviceChannelType === DeviceChannelType.HidDevice){
             return  <TextField fullWidth sx={{p:1}}
 					select
 					variant="standard"
@@ -92,7 +102,7 @@ export default function FormDialog(props:any) {
 			return <TextField fullWidth sx={{p:1}}
 				value={address}
 				onChange={(event) => setAddress(event.target.value)}
-				placeholder="地址"
+				placeholder={deviceChannelType === DeviceChannelType.Socket ? "host:port 或 [IPv6]:port" : "本地监听端口"}
 				variant="standard" />
 		}
 	}
@@ -110,7 +120,7 @@ export default function FormDialog(props:any) {
 			<TextField fullWidth sx={{p:1}}
 				select
 				value={deviceChannelType}
-                onChange={(event) => changeDeviceChannelType(event.target.value as unknown as DeviceChannelType)}
+                onChange={(event) => changeDeviceChannelType(Number(event.target.value) as DeviceChannelType)}
 				variant="standard"
 				SelectProps={{
 					native:true

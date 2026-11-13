@@ -1,38 +1,35 @@
 import * as dgram from "dgram";
-import {IDisposable} from "./idisposable";
-
-
+import { IDisposable } from "./idisposable";
+import { parsePort } from "./endpoint";
 export abstract class UdpClient implements IDisposable {
     udpClient: dgram.Socket;
-    socketAddress: string
-
-    protected constructor(address: string) {
-        this.socketAddress = address;
-    }
-
-
+    protected constructor(private socketAddress: string, private options: { remoteAddress?: string; remotePort?: number } = {}) {}
     abstract onError(error: any): void;
-
     abstract onOpen(): void;
-
     abstract onData(data: any): void;
-
     connect() {
-        this.udpClient = dgram.createSocket("udp4");
-        this.udpClient.on("listening", this.onOpen.bind(this))
-        this.udpClient.on("error", this.onError.bind(this))
-        this.udpClient.on("message", this.onData.bind(this))
-        this.udpClient.bind(parseInt(this.socketAddress))
+        if (this.udpClient) return;
+        const port = parsePort(this.socketAddress);
+        const socket = dgram.createSocket("udp4");
+        this.udpClient = socket;
+        socket.on("listening", () => { if (this.udpClient === socket) this.onOpen(); });
+        socket.on("error", error => { if (this.udpClient === socket) this.onError(error); });
+        socket.on("message", data => { if (this.udpClient === socket) this.onData(data); });
+        socket.bind(port);
     }
-
     send(command: Uint8Array) {
-        this.udpClient.send(command, 1500, "255.255.255.255", (err, bytes) => {
-            console.log(err)
+        if (!this.udpClient) throw new Error("UDP 未连接");
+        this.udpClient.send(command, this.options.remotePort ?? 1500, this.options.remoteAddress || "255.255.255.255", error => {
+            if (error) this.onError(error);
         });
     }
-
     dispose() {
-        this.udpClient.close();
+        const socket = this.udpClient;
         delete this.udpClient;
+        if (socket) {
+            try { socket.close(); } catch (error) {
+                if ((error as NodeJS.ErrnoException).code !== "ERR_SOCKET_DGRAM_NOT_RUNNING") throw error;
+            }
+        }
     }
 }

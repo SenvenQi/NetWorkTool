@@ -1,6 +1,6 @@
-import { IRequsetHandler } from "../../commons/Mediator/irequestHandler";
+import { IRequsetHandler } from "../../commons/Mediator/IRequestHandler";
 import { createDecorator, ServiceIdentifier } from "../../commons/dependencyInjection/instantiation";
-import { IRequset } from "../../commons/Mediator/irequest";
+import { IRequset } from "../../commons/Mediator/IRequest";
 import { DeviceType } from "../../domains/deviceType";
 import { DeviceChannelType } from "../../domains/deviceChannelType";
 import { IMainWindowService, IWindowService } from "../../service/windowService";
@@ -29,7 +29,7 @@ export class AddDeviceRequestHandler implements IRequsetHandler<AddDeviceRequest
     constructor( @IMainWindowService private windowService: IWindowService,
                  @IDeviceContext private deviceRepo:IDeviceContext ) {
     }
-    handle(command: AddDeviceRequest): void {
+    handle(command: AddDeviceRequest): Promise<void> {
         const device = {
             name: command.name,
             address: command.address,
@@ -37,10 +37,8 @@ export class AddDeviceRequestHandler implements IRequsetHandler<AddDeviceRequest
             type: command.type,
             channelType: command.channelType
         }
-        this.deviceRepo.addDevice(command.name,command.address,JSON.stringify(command.option),command.type,command.channelType).then(()=>{
+        return this.deviceRepo.addDevice(command.name,command.address,JSON.stringify(command.option || {}),command.type,command.channelType).then(()=>{
                 this.windowService.sendMessage({type:"CALL_BACK_ADD_DEVICE",data:device})
-        }).catch((error)=>{
-            console.log(error)
         });
     }
 }

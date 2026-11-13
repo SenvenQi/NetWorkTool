@@ -4,7 +4,7 @@ import { connect } from 'react-redux';
 
 class Routers extends React.Component<any> {
   render() {
-      const Component = this.props.pages.find((x:any)=> x.path==this.props.path).component;
+      const Component = this.props.pages.find((x:any)=> x.path===this.props.path).component;
       return <Component/>
     }
 }

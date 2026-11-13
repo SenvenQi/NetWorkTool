@@ -1,7 +1,8 @@
 import { app } from 'electron'
+import { validateDevice } from '../commons/validateDevice';
 import BaseSendPackage from "../commands/base/sendPackage";
-import SerialPort from 'serialport';
-import { IMediator } from "../commons/Mediator/imediator";
+import { SerialPort } from 'serialport';
+import { IMediator } from "../commons/Mediator/IMediator";
 import { AddDeviceRequest } from '../application/Device/addDevice';
 import { RemoveDeviceRequest } from '../application/Device/removeDevice';
 import { SendMessageRequest } from '../application/Device/sendMessage';
@@ -34,40 +35,44 @@ export class DeviceController {
     }
 
     addDevice(message: any) {
-        this.mediator.send(new AddDeviceRequest(message.name, message.address, message.option, message.deviceType, message.deviceChannelType));
+        message = validateDevice(message);
+        return this.mediator.send(new AddDeviceRequest(message.name, message.address, message.option, message.deviceType, message.deviceChannelType));
     }
 
     addCommand(message:any){
-        this.mediator.send(new AddCommandRequest(message.name,message.command))
+        if (!message || typeof message.name !== "string" || !message.name.trim() || typeof message.command !== "string" || !message.command.length) throw new Error("命令名称和内容不能为空");
+        if (![0, 1].includes(Number(message.type))) throw new Error("无效的命令类型");
+        return this.mediator.send(new AddCommandRequest(message.name.trim(), message.type === 1 || message.type === "1"
+            ? Buffer.from(message.command, "utf8").toString("hex")
+            : BaseSendPackage.Create(message.command).getCmd().toString("hex")))
     }
 
     loadCommand() {
-        console.log("loadCommandRequest----");
-        this.mediator.send(new LoadCommandRequest());
+        return this.mediator.send(new LoadCommandRequest());
     }
 
     copyToClipborard(text:Buffer){
-        this.clipborardService.copy(text);
+        return this.clipborardService.copy(text);
     }
 
     connectDevice(deivce: any) {
-        this.mediator.send(new ConnectDeviceRequest(deivce));
+        return this.mediator.send(new ConnectDeviceRequest(deivce));
     }
 
     closeDevice(address: any) {
-        this.mediator.send(new CloseDeviceRequest(address));
+        return this.mediator.send(new CloseDeviceRequest(address));
     }
 
     removeDevice(address: any) {
-        this.mediator.send(new RemoveDeviceRequest(address))
+        return this.mediator.send(new RemoveDeviceRequest(address))
     }
 
     sendMessage(message: any) {
-        this.mediator.send(new SendMessageRequest(message.address, BaseSendPackage.Create(message.message).getCmd()))
+        return this.mediator.send(new SendMessageRequest(message.address, BaseSendPackage.Create(message.message).getCmd()))
     }
 
     loadData(){
-        this.mediator.send(new LoadDataRequest());
+        return this.mediator.send(new LoadDataRequest());
     }
 
     getHidDevices(){
@@ -76,7 +81,7 @@ export class DeviceController {
     }
 
     getPorts() {
-         SerialPort.list().then((ports)=>{
+         return SerialPort.list().then((ports)=>{
              this.windowService.sendMessage({type:"SET_PORTS",data:ports})
          })
     }

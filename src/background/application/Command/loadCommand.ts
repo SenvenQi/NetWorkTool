@@ -1,6 +1,6 @@
-import { IRequsetHandler } from "../../commons/Mediator/irequestHandler";
+import { IRequsetHandler } from "../../commons/Mediator/IRequestHandler";
 import { createDecorator, ServiceIdentifier } from "../../commons/dependencyInjection/instantiation";
-import { IRequset } from "../../commons/Mediator/irequest";
+import { IRequset } from "../../commons/Mediator/IRequest";
 import { IMainWindowService, IWindowService } from "../../service/windowService";
 import { IDeviceContext } from "../../domains/ideviceContext";
 
@@ -14,8 +14,8 @@ export class LoadCommandRequestHandler implements IRequsetHandler<LoadCommandReq
     constructor( @IMainWindowService private windowService: IWindowService,
                  @IDeviceContext private deviceRepo:IDeviceContext ) {
     }
-    handle(command: LoadCommandRequest): void {
-        this.deviceRepo.loadCommand().then((commands)=>{
+    handle(command: LoadCommandRequest): Promise<void> {
+        return this.deviceRepo.loadCommand().then((commands)=>{
                const viewCommands = commands.map(item=>{
                     return {
                         id:item.id,
@@ -24,8 +24,6 @@ export class LoadCommandRequestHandler implements IRequsetHandler<LoadCommandReq
                     }
                 })
                 this.windowService.sendMessage({type:"CALL_BACK_INIT_COMMAND_DATA",data:viewCommands})
-        }).catch((error)=>{
-            console.log(error)
         });
     }
 }

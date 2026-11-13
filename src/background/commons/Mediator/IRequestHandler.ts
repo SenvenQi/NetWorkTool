@@ -1,5 +1,5 @@
-import { IRequset } from "./irequest";
+import { IRequset } from "./IRequest";
 
 export interface IRequsetHandler<T extends IRequset>{
-    handle(command:T):void
+    handle(command:T):void | Promise<void>
 }

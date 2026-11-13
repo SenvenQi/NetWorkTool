@@ -1,6 +1,6 @@
-import {IRequsetHandler} from "../../commons/Mediator/irequestHandler";
+import {IRequsetHandler} from "../../commons/Mediator/IRequestHandler";
 import {createDecorator, ServiceIdentifier} from "../../commons/dependencyInjection/instantiation";
-import {IRequset} from "../../commons/Mediator/irequest";
+import {IRequset} from "../../commons/Mediator/IRequest";
 import {IMainWindowService, IWindowService} from "../../service/windowService";
 import {IDeviceContext} from "../../domains/ideviceContext";
 
@@ -22,8 +22,8 @@ export class AddCommandRequestHandler implements IRequsetHandler<AddCommandReque
                 @IDeviceContext private deviceRepo: IDeviceContext) {
     }
 
-    handle(command: AddCommandRequest): void {
-        this.deviceRepo.addCommand(command.name, command.command).then((commandData) => {
+    handle(command: AddCommandRequest): Promise<void> {
+        return this.deviceRepo.addCommand(command.name, command.command).then((commandData) => {
             this.windowService.sendMessage({
                 type: "CALL_BACK_ADD_COMMAND", data: {
                     id: commandData.id,
@@ -31,8 +31,6 @@ export class AddCommandRequestHandler implements IRequsetHandler<AddCommandReque
                     hexString: Buffer.from(commandData.hexString, 'hex')
                 }
             })
-        }).catch((error) => {
-            console.log(error)
         });
     }
 }

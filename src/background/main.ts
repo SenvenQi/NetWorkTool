@@ -4,7 +4,7 @@ import {ServiceCollection} from "./commons/dependencyInjection/serviceCollection
 import {IInstantiationService} from "./commons/dependencyInjection/instantiation";
 import {IDeviceManager} from "./domains/ideviceManager";
 import {InstantiationService} from "./commons/dependencyInjection/InstantiationService";
-import {IMediator, Mediator} from "./commons/Mediator/imediator";
+import {IMediator, Mediator} from "./commons/Mediator/IMediator";
 import {SyncDescriptor} from "./commons/dependencyInjection/descriptors";
 
 import {DatabaseManager, IDatabaseManager} from "./database/service/DatabaseManager";
