@@ -15,3 +15,9 @@ a {
 * {
   box-sizing: border-box;
 }
+
+/* Status notifications must never intercept terminal input or dialog actions. */
+.app-notifications,
+.app-notifications * {
+  pointer-events: none !important;
+}

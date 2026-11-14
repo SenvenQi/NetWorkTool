@@ -1,154 +1,208 @@
-import * as React from 'react';
-import Button from '@mui/material/Button';
-import TextField from '@mui/material/TextField';
-import Dialog from '@mui/material/Dialog';
-import DialogActions from '@mui/material/DialogActions';
-import DialogContent from '@mui/material/DialogContent';
-import DialogTitle from '@mui/material/DialogTitle';
-import {DeviceType} from '../models/deviceType';
-import {DeviceChannelType} from '../models/deviceChannelType';
+import { useEffect, useState } from "react";
+import {
+  Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Stack,
+  TextField,
+  Typography,
+} from "@mui/material";
+import { DeviceType } from "../models/deviceType";
+import { protocols } from "./connectionHeader";
 
-export default function FormDialog(props:any) {
-  const [name, setName] = React.useState("");
-  const [address, setAddress] = React.useState("");
-  const [options, setOptions] = React.useState<any>({});
-  const buadRates = [115200,57600,38400,19200,9600,4800,2400,1800,1200,600,300,200,150,134,110,75,50];
-  const [deviceType] = React.useState(DeviceType.base);
-  const [deviceChannelType, setDeviceChannelType] = React.useState(DeviceChannelType.Socket);
-  const renderOption = () => {
-     if (deviceChannelType === DeviceChannelType.Ssh || deviceChannelType === DeviceChannelType.Sftp) {
-         return <TextField fullWidth sx={{p: 1}} label="默认用户名（可选）" value={options.username || ""} onChange={event => setOptions({username: event.target.value})} helperText="认证信息在连接时填写，不保存密码或私钥"/>;
-     }
-     if (deviceChannelType === DeviceChannelType.Serialport){
-             return <TextField fullWidth sx={{p:1}}
-                               select
-                    value={options.baudRate}
-				    onChange={(event) => setOptions({...options,baudRate:parseInt(event.target.value)})}
-                    SelectProps={{
-                                   native:true
-                               }
-                           }
-                    label="波特率"
-			    	variant="standard" >
-                 {
-                     buadRates.map((item,index)=>{
-                         return <option key={item} value={item}>
-                             {item}
-                         </option>
-                     })
-                 }
-                </TextField>
-     }
-     if (deviceChannelType === DeviceChannelType.UdpDevice) {
-         return <>
-             <TextField fullWidth sx={{p:1}} label="目标地址" value={options.remoteAddress ?? "255.255.255.255"}
-                 onChange={event => setOptions({...options, remoteAddress: event.target.value})} />
-             <TextField fullWidth sx={{p:1}} label="目标端口" type="number" value={options.remotePort ?? 1500}
-                 onChange={event => setOptions({...options, remotePort: Number(event.target.value)})} />
-         </>;
-     }
-     return null;
-  }
-
-  const changeDeviceChannelType = (channelType:DeviceChannelType)=>{
-      setDeviceChannelType(channelType);
-      setAddress("");
-      setOptions(channelType === DeviceChannelType.UdpDevice ? {remoteAddress: "255.255.255.255", remotePort: 1500} : {});
-      if (channelType === DeviceChannelType.Serialport){
-        setOptions({
-            baudRate:9600,
-            stopBits: 1,
-            dataBits: 8,
-            parity:'none',
-        })
-      }
-  }
-  const renderAddress = () => {
-		if (deviceChannelType === DeviceChannelType.Serialport) {
-			return <TextField fullWidth sx={{p:1}}
-					select
-					variant="standard"
-					value={address}
-                    label="地址"
-					onChange={(event) => setAddress(event.target.value)}
-					SelectProps={{
-						native:true
-					}}>
-					<option value={""}>
-						请选择串口
-					</option>
-					{props.ports.map((option:any) => (
-						<option key={option.path} value={option.path}>
-							{option.path}
-						</option>
-					))}
-				</TextField>
-		}else if(deviceChannelType === DeviceChannelType.HidDevice){
-            return  <TextField fullWidth sx={{p:1}}
-					select
-					variant="standard"
-					value={address}
-                    label="地址"
-					onChange={(event) => setAddress(event.target.value)}
-					SelectProps={{
-						native:true
-					}}>
-					<option value={""}>
-						请选择HID设备
-					</option>
-					{props.hidPaths.map((option:any) => (
-						<option key={option.path} value={option.path}>
-							{option.product}
-						</option>
-					))}
-				</TextField>
-        }
-        else {
-			return <TextField fullWidth sx={{p:1}}
-				value={address}
-                    label="地址"
-				onChange={(event) => setAddress(event.target.value)}
-				placeholder={deviceChannelType === DeviceChannelType.Socket ? "host:port 或 [IPv6]:port" : deviceChannelType >= DeviceChannelType.Ssh ? "服务器地址，默认端口 22" : "本地监听端口"}
-				variant="standard" />
-		}
-	}
-
+export default function DeviceDialog(props: any) {
+  const [name, setName] = useState("");
+  const [address, setAddress] = useState("");
+  const [channel, setChannel] = useState(0);
+  const [options, setOptions] = useState<any>({});
+  const changeChannel = (value: number) => {
+    setChannel(value);
+    setAddress("");
+    setOptions(
+      value === 1
+        ? { baudRate: 9600, stopBits: 1, dataBits: 8, parity: "none" }
+        : value === 4
+          ? { remoteAddress: "255.255.255.255", remotePort: 1500 }
+          : {},
+    );
+  };
+  useEffect(() => {
+    if (props.open) {
+      setName("");
+      changeChannel(props.initialChannel ?? 0);
+    }
+  }, [props.open, props.initialChannel]);
+  const nativeDevice = channel === 1 || channel === 3;
+  const addresses = channel === 1 ? props.ports : props.hidPaths;
+  const hints = [
+    "格式：host:port 或 [IPv6]:port",
+    "选择本机串口设备",
+    "输入本地 HTTP 监听端口",
+    "选择本机 HID 设备",
+    "输入本地 UDP 监听端口",
+    "格式：host:port，省略端口时使用 22",
+    "格式：host:port，省略端口时使用 22",
+  ];
   return (
-      <Dialog open={props.open} onClose={props.pending ? undefined : props.handleOpen}>
-        <DialogTitle>添加配置</DialogTitle>
-        <DialogContent>
-			<TextField
-				fullWidth sx={{p:1}}
-				value={name}
-                onChange={(event) => setName(event.target.value)}
-				label="名称" placeholder="名称"
-				variant="standard" />
-			<TextField fullWidth sx={{p:1}}
-				select
-				label="协议"
-                value={deviceChannelType}
-                onChange={(event) => changeDeviceChannelType(Number(event.target.value) as DeviceChannelType)}
-				variant="standard"
-				SelectProps={{
-					native:true
-				}}>
-				 {[{name:"Tcp客户端",value:DeviceChannelType.Socket},{name:"串口客户端",value:DeviceChannelType.Serialport},{name:"http监听",value:DeviceChannelType.HttpServer},{name:"hid设备",value:DeviceChannelType.HidDevice},{name:"udp设备",value:DeviceChannelType.UdpDevice},{name:"SSH 终端",value:DeviceChannelType.Ssh},{name:"SFTP 文件传输",value:DeviceChannelType.Sftp}].map((option) => (
-                    <option key={option.value} value={option.value}>
-                    {option.name}
-                    </option>
-                ))}
-			</TextField>
-			{
-				renderAddress()
-			}
-            {
-                renderOption()
-            }
-        </DialogContent>
-        <DialogActions>
-          <Button disabled={props.pending} onClick={props.handleOpen}>取消</Button>
-          <Button disabled={props.pending} onClick={()=>props.handleSubmite(name,address,deviceType,deviceChannelType,options)}>{props.pending ? "保存中…" : "确定"}</Button>
-        </DialogActions>
-      </Dialog>
+    <Dialog
+      open={props.open}
+      onClose={props.pending ? undefined : props.handleOpen}
+      fullWidth
+      maxWidth="sm"
+    >
+      <DialogTitle>
+        新建连接
+        <Typography
+          variant="body2"
+          color="text.secondary"
+          sx={{ mt: 0.7, fontWeight: 400 }}
+        >
+          选择协议，保存你的设备与服务。
+        </Typography>
+      </DialogTitle>
+      <DialogContent>
+        <Stack spacing={2.5} sx={{ pt: 1 }}>
+          <TextField
+            autoFocus
+            label="名称"
+            placeholder="例如：开发服务器"
+            value={name}
+            disabled={props.pending}
+            onChange={(event) => setName(event.target.value)}
+          />
+          <TextField
+            label="协议"
+            select
+            SelectProps={{ native: true }}
+            value={channel}
+            disabled={props.pending}
+            onChange={(event) => changeChannel(Number(event.target.value))}
+          >
+            {protocols.map((protocol, index) => (
+              <option key={index} value={index}>
+                {protocol.name} · {protocol.description}
+              </option>
+            ))}
+          </TextField>
+          {nativeDevice ? (
+            <TextField
+              label="地址"
+              select
+              SelectProps={{ native: true }}
+              value={address}
+              disabled={props.pending}
+              helperText={
+                addresses.length
+                  ? hints[channel]
+                  : "暂未检测到设备，请连接设备后重新打开此窗口"
+              }
+              onChange={(event) => setAddress(event.target.value)}
+            >
+              <option value="">
+                请选择{channel === 1 ? "串口" : "HID 设备"}
+              </option>
+              {addresses.map((item: any) => (
+                <option key={item.path} value={item.path}>
+                  {channel === 1 ? item.path : item.product || item.path}
+                </option>
+              ))}
+            </TextField>
+          ) : (
+            <TextField
+              label="地址"
+              value={address}
+              disabled={props.pending}
+              helperText={hints[channel]}
+              placeholder={
+                channel === 0
+                  ? "host:port 或 [IPv6]:port"
+                  : channel >= 5
+                    ? "192.168.1.10:22"
+                    : "例如：8080"
+              }
+              onChange={(event) => setAddress(event.target.value)}
+            />
+          )}
+          {channel === 1 && (
+            <TextField
+              label="波特率"
+              select
+              SelectProps={{ native: true }}
+              value={options.baudRate ?? 9600}
+              disabled={props.pending}
+              onChange={(event) =>
+                setOptions({ ...options, baudRate: Number(event.target.value) })
+              }
+            >
+              {[
+                115200, 57600, 38400, 19200, 9600, 4800, 2400, 1800, 1200, 600,
+                300, 200, 150, 134, 110, 75, 50,
+              ].map((value) => (
+                <option key={value} value={value}>
+                  {value}
+                </option>
+              ))}
+            </TextField>
+          )}
+          {channel === 4 && (
+            <Stack direction="row" spacing={2}>
+              <TextField
+                fullWidth
+                label="目标地址"
+                value={options.remoteAddress ?? ""}
+                disabled={props.pending}
+                onChange={(event) =>
+                  setOptions({ ...options, remoteAddress: event.target.value })
+                }
+              />
+              <TextField
+                label="目标端口"
+                type="number"
+                sx={{ width: 150, flexShrink: 0 }}
+                value={options.remotePort ?? 1500}
+                disabled={props.pending}
+                onChange={(event) =>
+                  setOptions({
+                    ...options,
+                    remotePort: Number(event.target.value),
+                  })
+                }
+              />
+            </Stack>
+          )}
+          {channel >= 5 && (
+            <TextField
+              label="默认用户名（可选）"
+              value={options.username || ""}
+              disabled={props.pending}
+              onChange={(event) => setOptions({ username: event.target.value })}
+              helperText="密码或私钥在连接时填写，不保存到配置。"
+            />
+          )}
+        </Stack>
+      </DialogContent>
+      <DialogActions>
+        <Button disabled={props.pending} onClick={props.handleOpen}>
+          取消
+        </Button>
+        <Button
+          variant="contained"
+          disabled={props.pending}
+          onClick={() =>
+            props.handleSubmite(
+              name,
+              address,
+              DeviceType.base,
+              channel,
+              options,
+            )
+          }
+        >
+          {props.pending ? "保存中…" : "确定"}
+        </Button>
+      </DialogActions>
+    </Dialog>
   );
 }

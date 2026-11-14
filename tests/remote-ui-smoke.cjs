@@ -88,7 +88,7 @@ const {createSshServer} = require('./helpers/ssh-server.cjs');
         await page.getByRole('dialog').getByRole('button', {name: '确定', exact: true}).click();
         await page.getByRole('dialog').waitFor({state: 'hidden'});
         await page.getByRole('row').filter({hasText: '测试目录'}).dblclick();
-        await page.waitForFunction(() => document.querySelector('input[aria-invalid="false"]')?.value === '/测试目录');
+        await page.waitForFunction(() => [...document.querySelectorAll('input')].some(input => input.value === '/测试目录'));
         await app.evaluate((_electron, filename) => { global.testFileDialogs.open = filename; }, source);
         await button('上传').click();
         await row('上传测试.bin').waitFor();

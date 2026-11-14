@@ -1,54 +1,93 @@
-import React, {Component} from 'react';
-import {Button, Dialog, DialogActions, DialogContent, DialogTitle, TextField} from '@mui/material'
-import {CommandType} from "../models/commandType";
-
-class CommandDialog extends Component<any> {
-    state = {
-        name: '',
-        type: CommandType.Buffer,
-        command: ''
+import { useEffect, useState } from "react";
+import {
+  Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Stack,
+  TextField,
+  Typography,
+} from "@mui/material";
+import { mono } from "../styles/mainTheme";
+export default function CommandDialog({
+  open,
+  pending,
+  close,
+  handleSubmite,
+}: any) {
+  const [name, setName] = useState("");
+  const [type, setType] = useState(0);
+  const [command, setCommand] = useState("");
+  useEffect(() => {
+    if (open) {
+      setName("");
+      setType(0);
+      setCommand("");
     }
-
-    render() {
-        return (
-            <Dialog open={this.props.open} onClose={this.props.pending ? undefined : this.props.close}>
-                <DialogTitle>添加命令</DialogTitle>
-                <DialogContent>
-                    <TextField
-                        fullWidth sx={{p: 1}}
-                        value={this.state.name}
-                        onChange={(event) => this.setState({name: event.target.value})}
-                        label="名称" placeholder="名称"
-                        variant="standard"/>
-                    <TextField fullWidth sx={{p: 1}}
-                               select
-                               label="编码" value={this.state.type}
-                               onChange={(event) => this.setState({type:Number(event.target.value)}) }
-                               variant="standard"
-                               SelectProps={{
-                                   native: true
-                               }}>
-                        {[{name: "16进制字符串", value: CommandType.Buffer},{name: "纯字符串", value: CommandType.String}].map((option) => (
-                            <option key={option.value} value={option.value}>
-                                {option.name}
-                            </option>
-                        ))}
-                    </TextField>
-                    <TextField
-                        fullWidth sx={{p: 1}}
-                        value={this.state.command}
-                        onChange={(event) => this.setState({command: event.target.value})}
-                        label="命令" placeholder="命令"
-                        variant="standard"/>
-                </DialogContent>
-                <DialogActions>
-                    <Button disabled={this.props.pending} onClick={this.props.close}>取消</Button>
-                    <Button disabled={this.props.pending}
-                        onClick={() => this.props.handleSubmite(this.state.name, this.state.type, this.state.command)}>{this.props.pending ? "保存中…" : "确定"}</Button>
-                </DialogActions>
-            </Dialog>
-        );
-    }
+  }, [open]);
+  return (
+    <Dialog
+      open={open}
+      onClose={pending ? undefined : close}
+      fullWidth
+      maxWidth="sm"
+    >
+      <DialogTitle>
+        添加命令
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.7 }}>
+          保存常用数据，下次一键发送。
+        </Typography>
+      </DialogTitle>
+      <DialogContent>
+        <Stack spacing={2.5} sx={{ pt: 1 }}>
+          <TextField
+            autoFocus
+            label="名称"
+            value={name}
+            disabled={pending}
+            onChange={(event) => setName(event.target.value)}
+          />
+          <TextField
+            label="编码"
+            select
+            SelectProps={{ native: true }}
+            value={type}
+            disabled={pending}
+            onChange={(event) => setType(Number(event.target.value))}
+          >
+            <option value={0}>16进制字符串</option>
+            <option value={1}>纯字符串</option>
+          </TextField>
+          <TextField
+            label="命令"
+            multiline
+            minRows={3}
+            maxRows={8}
+            value={command}
+            disabled={pending}
+            onChange={(event) => setCommand(event.target.value)}
+            sx={{ "& textarea": { fontFamily: mono } }}
+            helperText={
+              type === 0
+                ? "填写完整字节，例如 01 0A FF，字节间可以使用空格。"
+                : "文本将按 UTF-8 编码发送。"
+            }
+          />
+        </Stack>
+      </DialogContent>
+      <DialogActions>
+        <Button disabled={pending} onClick={close}>
+          取消
+        </Button>
+        <Button
+          variant="contained"
+          disabled={pending}
+          onClick={() => handleSubmite(name, type, command)}
+        >
+          {pending ? "保存中…" : "确定"}
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
 }
-
-export default CommandDialog;

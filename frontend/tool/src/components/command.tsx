@@ -1,41 +1,57 @@
-import React from "react";
-import {Button, Card, CardActions, CardContent, List, ListItem, styled, Typography} from "@mui/material";
-
-const StyledList = styled(List)(({theme}) => ({
-    backgroundColor: theme.palette.background.paper,
-    borderRadius: 0,
-    '&::-webkit-scrollbar': {
-        width: '0.6em'
-    },
-    '&::-webkit-scrollbar-thumb': {
-        backgroundColor: theme.palette.action.hover
-    }
-}))
-
-
-export class Command extends React.Component<any> {
-    render() {
-        return <StyledList sx={{flexGrow: 1, margin: 1}}>
-            {
-                this.props.data.map((item: any) => {
-                    return <ListItem key={item.id}>
-                        <Card sx={{width: "100%", overflowWrap: "anywhere"}}>
-                            <CardContent>
-                                <Typography component={'strong'} variant={'body2'} color={'text.secondary'}>
-                                    {item.name}
-                                </Typography>
-                                <Typography>
-                                    {Array.prototype.map.call(item.hexString, (x: number) => '0x' + (('00' + x.toString(16)).slice(-2))).join(' ')}
-                                </Typography>
-                            </CardContent>
-                            <CardActions>
-                                <Button size={"small"} disabled={this.props.disabled}
-                                        onClick={this.props.sendMessage.bind(this, item.hexString)}>发送</Button>
-                            </CardActions>
-                        </Card>
-                    </ListItem>
-                })
-            }
-        </StyledList>
-    }
+import { Box, Button, Paper, Stack, Typography } from "@mui/material";
+import { Send, TerminalOutlined } from "@mui/icons-material";
+import { mono } from "../styles/mainTheme";
+export function Command({ data, sendMessage, disabled }: any) {
+  if (!data.length)
+    return (
+      <Stack
+        alignItems="center"
+        sx={{ p: 4, color: "text.secondary", textAlign: "center" }}
+      >
+        <TerminalOutlined sx={{ fontSize: 30, mb: 1.5, color: "#acb9c4" }} />
+        <Typography variant="subtitle2">保存常用指令</Typography>
+        <Typography variant="caption" sx={{ mt: 1 }}>
+          点击右上角 + 添加命令，下一次一键发送。
+        </Typography>
+      </Stack>
+    );
+  return (
+    <Box sx={{ p: 1.5 }}>
+      {data.map((item: any) => (
+        <Paper
+          key={item.id}
+          variant="outlined"
+          sx={{ p: 1.5, mb: 1.25, borderRadius: 2 }}
+        >
+          <Typography variant="subtitle2" sx={{ overflowWrap: "anywhere" }}>
+            {item.name}
+          </Typography>
+          <Typography
+            sx={{
+              fontFamily: mono,
+              fontSize: 11,
+              color: "text.secondary",
+              mt: 1,
+              overflowWrap: "anywhere",
+              lineHeight: 1.8,
+            }}
+          >
+            {Array.from(
+              item.hexString as Uint8Array,
+              (value) => "0x" + value.toString(16).padStart(2, "0"),
+            ).join(" ")}
+          </Typography>
+          <Button
+            size="small"
+            disabled={disabled}
+            startIcon={<Send sx={{ fontSize: "13px !important" }} />}
+            onClick={() => sendMessage(item.hexString)}
+            sx={{ mt: 1 }}
+          >
+            发送
+          </Button>
+        </Paper>
+      ))}
+    </Box>
+  );
 }

@@ -1,142 +1,101 @@
-import React from 'react';
-import { styled, useTheme, Theme, CSSObject } from '@mui/material/styles';
-import Box from '@mui/material/Box';
-import MuiDrawer from '@mui/material/Drawer';
-import MuiAppBar from '@mui/material/AppBar';
-import Toolbar from '@mui/material/Toolbar';
-import List from '@mui/material/List';
-import CssBaseline from '@mui/material/CssBaseline';
-import Typography from '@mui/material/Typography';
-import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
-import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
-import ListItem from '@mui/material/ListItem';
-import ListItemIcon from '@mui/material/ListItemIcon';
-import ListItemText from '@mui/material/ListItemText';
-import NetworkWifi from '@mui/icons-material/NetworkWifi';
-import IconButton from '@mui/material/IconButton';
-import CloseIcon from '@mui/icons-material/Close';
-import MinimizeIcon from '@mui/icons-material/Minimize';
-import ZoomOutMapIcon from '@mui/icons-material/ZoomOutMap';
+import {
+  Box,
+  CssBaseline,
+  IconButton,
+  Stack,
+  Tooltip,
+  Typography,
+} from "@mui/material";
+import { styled } from "@mui/material/styles";
+import { HubOutlined, Close, Remove, CropSquare } from "@mui/icons-material";
 
-const drawerWidth = 240;
-
-const openedMixin = (theme: Theme): CSSObject => ({
-  width: drawerWidth,
-  transition: theme.transitions.create('width', {
-    easing: theme.transitions.easing.sharp,
-    duration: theme.transitions.duration.enteringScreen,
-  }),
-  overflowX: 'hidden',
-});
-
-const closedMixin = (theme: Theme): CSSObject => ({
-  transition: theme.transitions.create('width', {
-    easing: theme.transitions.easing.sharp,
-    duration: theme.transitions.duration.leavingScreen,
-  }),
-  overflowX: 'hidden',
-  width: `calc(${theme.spacing(7)} + 1px)`,
-});
-
-const DrawerFooter = styled('div')(({ theme }) => ({
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  marginTop: 'auto',
-  padding: theme.spacing(0, 1),
-  // necessary for content to be below app bar
-  ...theme.mixins.toolbar,
-}));
-
-const Drawer = styled(MuiDrawer, { shouldForwardProp: (prop) => prop !== 'open' })(
-  ({ theme, open }) => ({
-    width: drawerWidth,
-    flexShrink: 0,
-    whiteSpace: 'nowrap',
-    boxSizing: 'border-box',
-    ...(open && {
-      ...openedMixin(theme),
-      '& .MuiDrawer-paper': openedMixin(theme),
-    }),
-    ...(!open && {
-      ...closedMixin(theme),
-      '& .MuiDrawer-paper': closedMixin(theme),
-    }),
-  }),
-);
-
-const AppBar = styled(MuiAppBar)({
-  "-webkit-app-region": "drag"
-})
-
-
-const AppBarIconButton = styled(IconButton)({
-  "-webkit-app-region": "no-drag"
-})
-
-const ContentBox = styled(Box)({
-  overflow: "auto",
-  height: 'calc(100vh - 48px)'
-})
-export default function MiniDrawer(props: any) {
-  const theme = useTheme();
-  const [open, setOpen] = React.useState(false);
-
-  const handleDrawerClose = () => {
-    setOpen(!open);
-  };
-
-  const exist = () => {
-    window.api.send("device/close");
-  }
-
-  const min = () => {
-    window.api.send("device/min");
-  }
-
-  const max = () => {
-    window.api.send("device/max");
-  }
+const Titlebar = styled(Box)({ WebkitAppRegion: "drag" });
+const WindowButton = styled(IconButton)({ WebkitAppRegion: "no-drag" });
+export default function Layout({ children }: any) {
   return (
-    <Box sx={{ display: 'flex' }}>
+    <Box
+      sx={{
+        height: "100vh",
+        display: "flex",
+        flexDirection: "column",
+        overflow: "hidden",
+      }}
+    >
       <CssBaseline />
-      <Drawer variant="permanent" open={open}>
-        <List style={{ padding: 0 }}>
-          {props.data.map((item: any, index: any) => (
-            <ListItem button key={index} onClick={() => props.push(item.path)}>
-              <ListItemIcon>
-                <NetworkWifi />
-              </ListItemIcon>
-              <ListItemText primary={item.name} />
-            </ListItem>
-          ))}
-        </List>
-        <DrawerFooter>
-          <IconButton onClick={handleDrawerClose} aria-label={open ? "收起导航" : "展开导航"} size="medium">
-            {open ? <ArrowBackIosNewIcon fontSize="inherit" /> : <ArrowForwardIosIcon fontSize="inherit" />}
-          </IconButton>
-        </DrawerFooter>
-      </Drawer>
-      <Box component="main" sx={{ flexGrow: 1, minWidth: 0 }}>
-        <AppBar position={"relative"}>
-          <Toolbar variant="dense">
-            <Typography variant="h6" color="inherit" sx={{ flexGrow: 1 }} component="div">
-              网络测试工具
-            </Typography>
-            <AppBarIconButton onClick={min} aria-label="最小化" size="medium">
-              <MinimizeIcon />
-            </AppBarIconButton>
-            <AppBarIconButton onClick={max} aria-label="切换全屏" size="medium">
-              <ZoomOutMapIcon />
-            </AppBarIconButton>
-            <AppBarIconButton onClick={exist} aria-label="关闭窗口" size="medium">
-              <CloseIcon />
-            </AppBarIconButton>
-          </Toolbar>
-        </AppBar>
-        <ContentBox component={"div"}>
-          {props.children}
-        </ContentBox>
+      <Titlebar
+        sx={{
+          height: 52,
+          flexShrink: 0,
+          px: 2.5,
+          display: "flex",
+          alignItems: "center",
+          bgcolor: "background.paper",
+          borderBottom: "1px solid",
+          borderColor: "divider",
+        }}
+      >
+        <Stack direction="row" alignItems="center" spacing={1.2}>
+          <Box
+            sx={{
+              width: 28,
+              height: 28,
+              bgcolor: "primary.main",
+              color: "#fff",
+              borderRadius: "8px",
+              display: "grid",
+              placeItems: "center",
+            }}
+          >
+            <HubOutlined sx={{ fontSize: 18 }} />
+          </Box>
+          <Typography variant="subtitle2">网络测试工具</Typography>
+          <Typography
+            variant="caption"
+            sx={{
+              color: "text.secondary",
+              letterSpacing: 1.5,
+              ml: "12px !important",
+              fontSize: 10,
+            }}
+          >
+            NETWORK TOOL
+          </Typography>
+        </Stack>
+        <Box sx={{ flex: 1 }} />
+        <Tooltip title="最小化">
+          <WindowButton
+            size="small"
+            aria-label="最小化"
+            onClick={() => window.api.send("device/min")}
+          >
+            <Remove fontSize="small" />
+          </WindowButton>
+        </Tooltip>
+        <Tooltip title="切换全屏">
+          <WindowButton
+            size="small"
+            aria-label="切换全屏"
+            onClick={() => window.api.send("device/max")}
+          >
+            <CropSquare sx={{ fontSize: 16 }} />
+          </WindowButton>
+        </Tooltip>
+        <Tooltip title="关闭窗口">
+          <WindowButton
+            size="small"
+            aria-label="关闭窗口"
+            sx={{
+              ml: 0.5,
+              "&:hover": { bgcolor: "error.main", color: "#fff" },
+            }}
+            onClick={() => window.api.send("device/close")}
+          >
+            <Close fontSize="small" />
+          </WindowButton>
+        </Tooltip>
+      </Titlebar>
+      <Box component="main" sx={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
+        {children}
       </Box>
     </Box>
   );
